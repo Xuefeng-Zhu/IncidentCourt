@@ -1,0 +1,117 @@
+{
+  "format": 1,
+  "source": "RCAEval RE2-OB",
+  "source_revision": "afeacb11bcc94dadfd1c8f483ee4377b2b8b614e",
+  "source_database_sha256": "51ff5838b7c57550d824febd93caecb0487902d93da94c84952f145c2acaab26",
+  "synthetic": false,
+  "sampling": {
+    "metrics": "Every 10th distinct observed timestamp plus first/last, all source fields at those times",
+    "logs": "Up to250 error/timeout/fail/unavailable text matches spread across time, then up to250-500 overall observations spread across time; include signal boundaries",
+    "traces": "Complete observed trace groups, first/last-span groups plus deterministic hash order round-robin across12 time strata; at most5000 spans per incident"
+  },
+  "limitations": [
+    "This is a sampled experimental telemetry archive, not a full RCAEval benchmark.",
+    "Sampling changes distributions and may omit rare failures; rankings may differ from the full imported subset.",
+    "Complete observed trace groups retain captured spans only; original capture may lack parents.",
+    "Metric gaps remain NULL and observed signal coverage may end before the incident metric window."
+  ],
+  "incidents": [
+    {
+      "id": "IC-001",
+      "split": "development",
+      "rows": {
+        "metrics": 6956,
+        "logs": 500,
+        "traces": 5000
+      },
+      "coverage": {
+        "metrics": {
+          "first_ts": 1708474641.0,
+          "last_ts": 1708475570.0
+        },
+        "logs": {
+          "first_ts": 1708474641.0,
+          "last_ts": 1708475533.0
+        },
+        "traces": {
+          "first_ts": 1708474641.000683,
+          "last_ts": 1708475399.561999
+        }
+      },
+      "source_rows": {
+        "metrics": 68820,
+        "logs": 110067,
+        "traces": 199960
+      },
+      "source_trace_groups": 12257,
+      "selected_trace_groups": 296,
+      "source_log_text_matches": 178
+    },
+    {
+      "id": "IC-002",
+      "split": "holdout",
+      "rows": {
+        "metrics": 10440,
+        "logs": 499,
+        "traces": 5000
+      },
+      "coverage": {
+        "metrics": {
+          "first_ts": 1705342110.0,
+          "last_ts": 1705343550.0
+        },
+        "logs": {
+          "first_ts": 1705342110.0,
+          "last_ts": 1705343548.0
+        },
+        "traces": {
+          "first_ts": 1705342110.001999,
+          "last_ts": 1705343549.558894
+        }
+      },
+      "source_rows": {
+        "metrics": 103752,
+        "logs": 117601,
+        "traces": 254889
+      },
+      "source_trace_groups": 17167,
+      "selected_trace_groups": 357,
+      "source_log_text_matches": 238
+    },
+    {
+      "id": "IC-003",
+      "split": "holdout",
+      "rows": {
+        "metrics": 10730,
+        "logs": 499,
+        "traces": 5000
+      },
+      "coverage": {
+        "metrics": {
+          "first_ts": 1705388221.0,
+          "last_ts": 1705389661.0
+        },
+        "logs": {
+          "first_ts": 1705388221.0,
+          "last_ts": 1705389661.0
+        },
+        "traces": {
+          "first_ts": 1705388221.062,
+          "last_ts": 1705389660.895141
+        }
+      },
+      "source_rows": {
+        "metrics": 106634,
+        "logs": 131836,
+        "traces": 286200
+      },
+      "source_trace_groups": 20599,
+      "selected_trace_groups": 390,
+      "source_log_text_matches": 2323
+    }
+  ],
+  "compressed_bytes": 736817,
+  "expanded_bytes": 7343741,
+  "sha256": "469e5d17b7491d18dd0a3a82c3bfe195b72e7daf66b5cc4ede4f6b30972592a3",
+  "license_notice": "LICENSES/RCAEval-MIT.txt"
+}

@@ -1,0 +1,778 @@
+{
+  "incident_id": "IC-001",
+  "run_id": "46a6f5765fdb",
+  "mode": "sample / local",
+  "summary": "checkoutservice is the leading service to inspect from the available telemetry comparisons. Evidence coverage and competing explanations remain important; the causal mechanism is unproven.",
+  "likely_service": "checkoutservice",
+  "confidence": "limited",
+  "limitations": [
+    "Traces coverage is shorter than the observation window; missing intervals cannot be treated as healthy or recovered.",
+    "The first/last-third baseline is a declared heuristic, not a known healthy/fault boundary. Slow changes or early faults can be missed.",
+    "Resource and latency correlations do not prove a failure mechanism. Shared workload and common dependencies remain possible.",
+    "Trace durations are inclusive; sampling and missing parent spans can distort dependency comparisons.",
+    "RCAEval contains controlled experiments. No deployment history or support tickets are supplied or synthesized.",
+    "Local ranking scores are heuristic; confidence is qualitative and is not a calibrated probability.",
+    "Offline mode uses a curated, downsampled subset of real RCAEval telemetry. Sampling can change rankings and miss brief events; no benchmark accuracy claim is made."
+  ],
+  "alternatives": [
+    {
+      "service": "frontend-external",
+      "reason": "Also has metric changes or longer spans; shared load, propagation, or missing dependencies may explain the overlap.",
+      "evidence_ids": [
+        "E01"
+      ]
+    },
+    {
+      "service": "currencyservice",
+      "reason": "Also has metric changes or longer spans; shared load, propagation, or missing dependencies may explain the overlap.",
+      "evidence_ids": [
+        "E11"
+      ]
+    },
+    {
+      "service": "productcatalogservice",
+      "reason": "Also has metric changes or longer spans; shared load, propagation, or missing dependencies may explain the overlap.",
+      "evidence_ids": [
+        "E12"
+      ]
+    }
+  ],
+  "timeline": [
+    {
+      "ts": 1708474641.0,
+      "title": "Observation window begins",
+      "detail": "Baseline uses the first third of this window.",
+      "evidence_ids": []
+    },
+    {
+      "ts": 1708475321.0,
+      "title": "checkoutservice \u00b7 latency-50",
+      "detail": "First observed post-baseline threshold crossing.",
+      "evidence_ids": [
+        "E20"
+      ]
+    },
+    {
+      "ts": 1708475381.0,
+      "title": "checkoutservice \u00b7 latency-90",
+      "detail": "First observed post-baseline threshold crossing.",
+      "evidence_ids": [
+        "E21"
+      ]
+    },
+    {
+      "ts": 1708475391.0,
+      "title": "checkoutservice \u00b7 cpu",
+      "detail": "First observed post-baseline threshold crossing.",
+      "evidence_ids": [
+        "E19"
+      ]
+    },
+    {
+      "ts": 1708475541.0,
+      "title": "frontend-external \u00b7 error",
+      "detail": "First observed post-baseline threshold crossing.",
+      "evidence_ids": [
+        "E18"
+      ]
+    }
+  ],
+  "evidence": [
+    {
+      "id": "E01",
+      "kind": "metrics",
+      "service": "frontend-external",
+      "ts": 1708475260.3333333,
+      "summary": "error: mean 0 \u2192 0.90838 (zero baseline; ratio undefined); n=31/32.",
+      "rows": [
+        {
+          "service": "frontend-external",
+          "name": "error",
+          "baseline": 0.0,
+          "current": 0.908375,
+          "baseline_square": 0.0,
+          "baseline_n": 31,
+          "current_n": 32,
+          "relative_change": 90837500.0,
+          "standardized_change": 90837500.0,
+          "changed": true,
+          "strength": 30
+        }
+      ],
+      "query_id": "Q02"
+    },
+    {
+      "id": "E02",
+      "kind": "metrics",
+      "service": "checkoutservice",
+      "ts": 1708475260.3333333,
+      "summary": "cpu: mean 0.582 \u2192 9.8277 (+1589%); n=31/31.",
+      "rows": [
+        {
+          "service": "checkoutservice",
+          "name": "cpu",
+          "baseline": 0.582001964818846,
+          "current": 9.82770019786994,
+          "baseline_square": 0.5636240445214117,
+          "baseline_n": 31,
+          "current_n": 31,
+          "relative_change": 15.88602580736804,
+          "standardized_change": 19.49607343758684,
+          "changed": true,
+          "strength": 29.49607343758684
+        }
+      ],
+      "query_id": "Q02"
+    },
+    {
+      "id": "E03",
+      "kind": "metrics",
+      "service": "checkoutservice",
+      "ts": 1708475260.3333333,
+      "summary": "latency-50: mean 0.086563 \u2192 0.14971 (+73%); n=31/32.",
+      "rows": [
+        {
+          "service": "checkoutservice",
+          "name": "latency-50",
+          "baseline": 0.08656315464417563,
+          "current": 0.14971447651875752,
+          "baseline_square": 0.007656283442909084,
+          "baseline_n": 31,
+          "current_n": 32,
+          "relative_change": 0.7295404393956084,
+          "standardized_change": 4.944820576131711,
+          "changed": true,
+          "strength": 5.674361015527319
+        }
+      ],
+      "query_id": "Q02"
+    },
+    {
+      "id": "E04",
+      "kind": "metrics",
+      "service": "checkoutservice",
+      "ts": 1708475260.3333333,
+      "summary": "latency-90: mean 0.2178 \u2192 0.32265 (+48%); n=31/32.",
+      "rows": [
+        {
+          "service": "checkoutservice",
+          "name": "latency-90",
+          "baseline": 0.2178004284490499,
+          "current": 0.3226523319260795,
+          "baseline_square": 0.04746219582269788,
+          "baseline_n": 31,
+          "current_n": 32,
+          "relative_change": 0.48141275122219346,
+          "standardized_change": 4.814127512221934,
+          "changed": true,
+          "strength": 5.295540263444128
+        }
+      ],
+      "query_id": "Q02"
+    },
+    {
+      "id": "E05",
+      "kind": "metrics",
+      "service": "coverage",
+      "ts": 1708474641.0,
+      "summary": "metrics: 6956 observations; explicit coverage bounds, no zero filling.",
+      "rows": [
+        {
+          "first_ts": 1708474641.0,
+          "last_ts": 1708475570.0,
+          "observations": 6956
+        }
+      ],
+      "query_id": "Q03"
+    },
+    {
+      "id": "E06",
+      "kind": "logs",
+      "service": "coverage",
+      "ts": 1708474641.0,
+      "summary": "logs: 500 observations; explicit coverage bounds, no zero filling.",
+      "rows": [
+        {
+          "first_ts": 1708474641.0,
+          "last_ts": 1708475533.0,
+          "observations": 500
+        }
+      ],
+      "query_id": "Q04"
+    },
+    {
+      "id": "E07",
+      "kind": "traces",
+      "service": "coverage",
+      "ts": 1708474641.000683,
+      "summary": "traces: 5000 observations; explicit coverage bounds, no zero filling.",
+      "rows": [
+        {
+          "first_ts": 1708474641.000683,
+          "last_ts": 1708475399.561999,
+          "observations": 5000
+        }
+      ],
+      "query_id": "Q05"
+    },
+    {
+      "id": "E08",
+      "kind": "traces",
+      "service": "frontend",
+      "ts": 1708475260.3333333,
+      "summary": "Mean span duration 10.5 \u2192 14.3 ms (1.36\u00d7); inclusive durations, n=1004/414.",
+      "rows": [
+        {
+          "service": "frontend",
+          "baseline_ms": 10.536206175298805,
+          "current_ms": 14.326640096618359,
+          "baseline_n": 1004,
+          "current_n": 414
+        }
+      ],
+      "query_id": "Q06"
+    },
+    {
+      "id": "E09",
+      "kind": "traces",
+      "service": "checkoutservice",
+      "ts": 1708475260.3333333,
+      "summary": "Mean span duration 11.7 \u2192 3.27 ms (0.28\u00d7); inclusive durations, n=49/5.",
+      "rows": [
+        {
+          "service": "checkoutservice",
+          "baseline_ms": 11.687755102040818,
+          "current_ms": 3.2652,
+          "baseline_n": 49,
+          "current_n": 5
+        }
+      ],
+      "query_id": "Q06"
+    },
+    {
+      "id": "E10",
+      "kind": "traces",
+      "service": "recommendationservice",
+      "ts": 1708475260.3333333,
+      "summary": "Mean span duration 3.18 \u2192 3.11 ms (0.98\u00d7); inclusive durations, n=140/44.",
+      "rows": [
+        {
+          "service": "recommendationservice",
+          "baseline_ms": 3.183357142857143,
+          "current_ms": 3.1064545454545454,
+          "baseline_n": 140,
+          "current_n": 44
+        }
+      ],
+      "query_id": "Q06"
+    },
+    {
+      "id": "E11",
+      "kind": "traces",
+      "service": "currencyservice",
+      "ts": 1708475260.3333333,
+      "summary": "Mean span duration 0.131 \u2192 0.791 ms (6.04\u00d7); inclusive durations, n=264/131.",
+      "rows": [
+        {
+          "service": "currencyservice",
+          "baseline_ms": 0.13083333333333333,
+          "current_ms": 0.790618320610687,
+          "baseline_n": 264,
+          "current_n": 131
+        }
+      ],
+      "query_id": "Q06"
+    },
+    {
+      "id": "E12",
+      "kind": "traces",
+      "service": "productcatalogservice",
+      "ts": 1708475260.3333333,
+      "summary": "Mean span duration 0.046 \u2192 0.128 ms (2.79\u00d7); inclusive durations, n=526/157.",
+      "rows": [
+        {
+          "service": "productcatalogservice",
+          "baseline_ms": 0.0460171102661597,
+          "current_ms": 0.12847133757961782,
+          "baseline_n": 526,
+          "current_n": 157
+        }
+      ],
+      "query_id": "Q06"
+    },
+    {
+      "id": "E13",
+      "kind": "traces",
+      "service": "service graph",
+      "ts": null,
+      "summary": "Observed cross-service parent/child edges; this graph is observational and does not establish causation.",
+      "rows": [
+        {
+          "caller": "frontend",
+          "callee": "productcatalogservice",
+          "spans": 1067,
+          "child_mean_ms": 0.014876288659793813
+        },
+        {
+          "caller": "frontend",
+          "callee": "currencyservice",
+          "spans": 672,
+          "child_mean_ms": 0.2680982142857143
+        },
+        {
+          "caller": "frontend",
+          "callee": "recommendationservice",
+          "spans": 162,
+          "child_mean_ms": 3.444024691358025
+        },
+        {
+          "caller": "recommendationservice",
+          "callee": "productcatalogservice",
+          "spans": 160,
+          "child_mean_ms": 0.016087499999999998
+        },
+        {
+          "caller": "checkoutservice",
+          "callee": "currencyservice",
+          "spans": 29,
+          "child_mean_ms": 0.1327586206896552
+        },
+        {
+          "caller": "checkoutservice",
+          "callee": "productcatalogservice",
+          "spans": 18,
+          "child_mean_ms": 0.013888888888888888
+        },
+        {
+          "caller": "checkoutservice",
+          "callee": "emailservice",
+          "spans": 7,
+          "child_mean_ms": 0.265
+        },
+        {
+          "caller": "checkoutservice",
+          "callee": "paymentservice",
+          "spans": 7,
+          "child_mean_ms": 0.3757142857142857
+        },
+        {
+          "caller": "frontend",
+          "callee": "checkoutservice",
+          "spans": 7,
+          "child_mean_ms": 91.158
+        }
+      ],
+      "query_id": "Q07"
+    },
+    {
+      "id": "E14",
+      "kind": "logs",
+      "service": "checkoutservice",
+      "ts": null,
+      "summary": "No error/timeout/fail/unavailable text matches in this service\u2019s later window. This does not prove the service healthy.",
+      "rows": [],
+      "query_id": "Q08"
+    },
+    {
+      "id": "E15",
+      "kind": "logs",
+      "service": "frontend-external",
+      "ts": null,
+      "summary": "No error/timeout/fail/unavailable text matches in this service\u2019s later window. This does not prove the service healthy.",
+      "rows": [],
+      "query_id": "Q09"
+    },
+    {
+      "id": "E16",
+      "kind": "logs",
+      "service": "currencyservice",
+      "ts": null,
+      "summary": "No error/timeout/fail/unavailable text matches in this service\u2019s later window. This does not prove the service healthy.",
+      "rows": [],
+      "query_id": "Q10"
+    },
+    {
+      "id": "E17",
+      "kind": "counterevidence",
+      "service": "checkoutservice",
+      "ts": 1708475260.3333333,
+      "summary": "Other measured metrics did not meet the increase threshold. Stable or decreasing measurements weaken a broad saturation explanation.",
+      "rows": [
+        {
+          "service": "checkoutservice",
+          "name": "diskio",
+          "baseline": 0.0,
+          "current": 0.0,
+          "baseline_square": 0.0,
+          "baseline_n": 27,
+          "current_n": 31,
+          "relative_change": 0.0,
+          "standardized_change": 0.0,
+          "changed": false,
+          "strength": 0.0
+        },
+        {
+          "service": "checkoutservice",
+          "name": "mem",
+          "baseline": 13010217.290322581,
+          "current": 16150400.0,
+          "baseline_square": 169609981701483.34,
+          "baseline_n": 31,
+          "current_n": 32,
+          "relative_change": 0.24136281813011592,
+          "standardized_change": 2.413628181301159,
+          "changed": false,
+          "strength": 2.654990999431275
+        },
+        {
+          "service": "checkoutservice",
+          "name": "socket",
+          "baseline": 9.0,
+          "current": 10.0,
+          "baseline_square": 81.0,
+          "baseline_n": 31,
+          "current_n": 32,
+          "relative_change": 0.1111111111111111,
+          "standardized_change": 1.1111111111111112,
+          "changed": false,
+          "strength": 1.2222222222222223
+        },
+        {
+          "service": "checkoutservice",
+          "name": "workload",
+          "baseline": 1.0343548387096773,
+          "current": 0.86475,
+          "baseline_square": 1.136969258064516,
+          "baseline_n": 31,
+          "current_n": 32,
+          "relative_change": -0.16397162014657712,
+          "standardized_change": -0.6548531095052859,
+          "changed": false,
+          "strength": 0
+        }
+      ],
+      "query_id": "Q02"
+    },
+    {
+      "id": "E18",
+      "kind": "metrics",
+      "service": "frontend-external",
+      "ts": 1708475541.0,
+      "summary": "First observed post-baseline threshold crossing; not a fault injection timestamp.",
+      "rows": [
+        {
+          "id": "IC-001-m-900-54",
+          "ts": 1708475541.0,
+          "service": "frontend-external",
+          "name": "error",
+          "value": 7.267
+        }
+      ],
+      "query_id": "Q11"
+    },
+    {
+      "id": "E19",
+      "kind": "metrics",
+      "service": "checkoutservice",
+      "ts": 1708475391.0,
+      "summary": "First observed post-baseline threshold crossing; not a fault injection timestamp.",
+      "rows": [
+        {
+          "id": "IC-001-m-750-3",
+          "ts": 1708475391.0,
+          "service": "checkoutservice",
+          "name": "cpu",
+          "value": 9.333002821442966
+        }
+      ],
+      "query_id": "Q12"
+    },
+    {
+      "id": "E20",
+      "kind": "metrics",
+      "service": "checkoutservice",
+      "ts": 1708475321.0,
+      "summary": "First observed post-baseline threshold crossing; not a fault injection timestamp.",
+      "rows": [
+        {
+          "id": "IC-001-m-680-57",
+          "ts": 1708475321.0,
+          "service": "checkoutservice",
+          "name": "latency-50",
+          "value": 0.11875
+        }
+      ],
+      "query_id": "Q13"
+    },
+    {
+      "id": "E21",
+      "kind": "metrics",
+      "service": "checkoutservice",
+      "ts": 1708475381.0,
+      "summary": "First observed post-baseline threshold crossing; not a fault injection timestamp.",
+      "rows": [
+        {
+          "id": "IC-001-m-740-67",
+          "ts": 1708475381.0,
+          "service": "checkoutservice",
+          "name": "latency-90",
+          "value": 0.28750000000000053
+        }
+      ],
+      "query_id": "Q14"
+    }
+  ],
+  "steps": [
+    {
+      "role": "Planner",
+      "action": "Compare telemetry windows",
+      "detail": "Compare the first and last thirds of the observed window. No injected-fault timestamp is supplied. Changes are associations, not causal proof.",
+      "query_id": null,
+      "evidence_ids": []
+    },
+    {
+      "role": "Investigator",
+      "action": "Form an initial hypothesis",
+      "detail": "Largest baseline-relative metric change is observed at frontend-external.",
+      "query_id": "Q02",
+      "evidence_ids": [
+        "E01"
+      ]
+    },
+    {
+      "role": "Planner",
+      "action": "Retrieve earlier verified observations",
+      "detail": "0 earlier findings retrieved through the official H-MEM reference. Current incident and held-out memories excluded.",
+      "query_id": null,
+      "evidence_ids": []
+    },
+    {
+      "role": "Evidence Critic",
+      "action": "Request independent signals",
+      "detail": "Latency and error metrics may be downstream symptoms. Query trace durations and dependency edges before accepting this hypothesis.",
+      "query_id": null,
+      "evidence_ids": []
+    },
+    {
+      "role": "Investigator",
+      "action": "Inspect dependencies",
+      "detail": "Compared 7 services and 9 observed edges.",
+      "query_id": "Q07",
+      "evidence_ids": [
+        "E13"
+      ]
+    },
+    {
+      "role": "Evidence Critic",
+      "action": "Revise hypothesis",
+      "detail": "Reranked from frontend-external to checkoutservice after resource and trace checks. This is an observational ranking, not a proven root cause.",
+      "query_id": null,
+      "evidence_ids": [
+        "E02",
+        "E03",
+        "E04",
+        "E09"
+      ]
+    },
+    {
+      "role": "Evidence Critic",
+      "action": "Record counterevidence",
+      "detail": "A leading service can have stable measurements; retain these alongside supporting signals.",
+      "query_id": "Q02",
+      "evidence_ids": [
+        "E17"
+      ]
+    }
+  ],
+  "queries": [
+    {
+      "id": "Q01",
+      "purpose": "Read incident window",
+      "sql": "SELECT id,title,source,start_ts,end_ts,split FROM incidents WHERE id='IC-001' LIMIT 1",
+      "row_count": 1,
+      "backend": "sample"
+    },
+    {
+      "id": "Q02",
+      "purpose": "Compare metric baseline with later observations",
+      "sql": "SELECT service,name,\nAVG(CASE WHEN ts<1708474950.6666667 THEN value END) AS baseline,\nAVG(CASE WHEN ts>=1708475260.3333333 THEN value END) AS current,\nAVG(CASE WHEN ts<1708474950.6666667 THEN value*value END) AS baseline_square,\nCOUNT(CASE WHEN ts<1708474950.6666667 THEN value END) AS baseline_n,\nCOUNT(CASE WHEN ts>=1708475260.3333333 THEN value END) AS current_n\nFROM metrics WHERE incident_id='IC-001'\nGROUP BY service,name ORDER BY service,name LIMIT 1000",
+      "row_count": 74,
+      "backend": "sample"
+    },
+    {
+      "id": "Q03",
+      "purpose": "Inspect metrics coverage",
+      "sql": "SELECT MIN(ts) AS first_ts,MAX(ts) AS last_ts,COUNT(*) AS observations FROM metrics WHERE incident_id='IC-001'",
+      "row_count": 1,
+      "backend": "sample"
+    },
+    {
+      "id": "Q04",
+      "purpose": "Inspect logs coverage",
+      "sql": "SELECT MIN(ts) AS first_ts,MAX(ts) AS last_ts,COUNT(*) AS observations FROM logs WHERE incident_id='IC-001'",
+      "row_count": 1,
+      "backend": "sample"
+    },
+    {
+      "id": "Q05",
+      "purpose": "Inspect traces coverage",
+      "sql": "SELECT MIN(ts) AS first_ts,MAX(ts) AS last_ts,COUNT(*) AS observations FROM traces WHERE incident_id='IC-001'",
+      "row_count": 1,
+      "backend": "sample"
+    },
+    {
+      "id": "Q06",
+      "purpose": "Critic follow-up: compare trace durations by service",
+      "sql": "SELECT service,\nAVG(CASE WHEN ts<1708474950.6666667 THEN duration_ms END) AS baseline_ms,\nAVG(CASE WHEN ts>=1708475260.3333333 THEN duration_ms END) AS current_ms,\nCOUNT(CASE WHEN ts<1708474950.6666667 THEN duration_ms END) AS baseline_n,\nCOUNT(CASE WHEN ts>=1708475260.3333333 THEN duration_ms END) AS current_n\nFROM traces WHERE incident_id='IC-001'\nGROUP BY service ORDER BY current_ms DESC LIMIT 100",
+      "row_count": 7,
+      "backend": "sample"
+    },
+    {
+      "id": "Q07",
+      "purpose": "Critic follow-up: inspect observed parent/child dependencies",
+      "sql": "SELECT p.service AS caller,c.service AS callee,COUNT(*) AS spans,\nAVG(c.duration_ms) AS child_mean_ms\nFROM traces p JOIN traces c ON c.trace_id=p.trace_id AND c.parent_id=p.span_id\nWHERE p.incident_id='IC-001' AND c.incident_id='IC-001' AND p.service<>c.service\nGROUP BY p.service,c.service ORDER BY spans DESC LIMIT 80",
+      "row_count": 9,
+      "backend": "sample"
+    },
+    {
+      "id": "Q08",
+      "purpose": "Critic follow-up: inspect service logs: checkoutservice",
+      "sql": "SELECT id,ts,service,severity,message\nFROM logs WHERE incident_id='IC-001' AND service='checkoutservice' AND ts>=1708475260.3333333\nAND (LOWER(message) LIKE '%error%' OR LOWER(message) LIKE '%timeout%' OR LOWER(message) LIKE '%fail%' OR LOWER(message) LIKE '%unavailable%')\nORDER BY ts LIMIT 6",
+      "row_count": 0,
+      "backend": "sample"
+    },
+    {
+      "id": "Q09",
+      "purpose": "Critic follow-up: inspect service logs: frontend-external",
+      "sql": "SELECT id,ts,service,severity,message\nFROM logs WHERE incident_id='IC-001' AND service='frontend-external' AND ts>=1708475260.3333333\nAND (LOWER(message) LIKE '%error%' OR LOWER(message) LIKE '%timeout%' OR LOWER(message) LIKE '%fail%' OR LOWER(message) LIKE '%unavailable%')\nORDER BY ts LIMIT 6",
+      "row_count": 0,
+      "backend": "sample"
+    },
+    {
+      "id": "Q10",
+      "purpose": "Critic follow-up: inspect service logs: currencyservice",
+      "sql": "SELECT id,ts,service,severity,message\nFROM logs WHERE incident_id='IC-001' AND service='currencyservice' AND ts>=1708475260.3333333\nAND (LOWER(message) LIKE '%error%' OR LOWER(message) LIKE '%timeout%' OR LOWER(message) LIKE '%fail%' OR LOWER(message) LIKE '%unavailable%')\nORDER BY ts LIMIT 6",
+      "row_count": 0,
+      "backend": "sample"
+    },
+    {
+      "id": "Q11",
+      "purpose": "Locate first threshold crossing after baseline",
+      "sql": "SELECT id,ts,service,name,value FROM metrics\nWHERE incident_id='IC-001' AND service='frontend-external' AND name='error' AND ts>=1708474950.6666667 AND value>0.0\nORDER BY ts LIMIT 1",
+      "row_count": 1,
+      "backend": "sample"
+    },
+    {
+      "id": "Q12",
+      "purpose": "Locate first threshold crossing after baseline",
+      "sql": "SELECT id,ts,service,name,value FROM metrics\nWHERE incident_id='IC-001' AND service='checkoutservice' AND name='cpu' AND ts>=1708474950.6666667 AND value>1.530469692194774\nORDER BY ts LIMIT 1",
+      "row_count": 1,
+      "backend": "sample"
+    },
+    {
+      "id": "Q13",
+      "purpose": "Locate first threshold crossing after baseline",
+      "sql": "SELECT id,ts,service,name,value FROM metrics\nWHERE incident_id='IC-001' AND service='checkoutservice' AND name='latency-50' AND ts>=1708474950.6666667 AND value>0.11210556650818086\nORDER BY ts LIMIT 1",
+      "row_count": 1,
+      "backend": "sample"
+    },
+    {
+      "id": "Q14",
+      "purpose": "Locate first threshold crossing after baseline",
+      "sql": "SELECT id,ts,service,name,value FROM metrics\nWHERE incident_id='IC-001' AND service='checkoutservice' AND name='latency-90' AND ts>=1708474950.6666667 AND value>0.2722505355613124\nORDER BY ts LIMIT 1",
+      "row_count": 1,
+      "backend": "sample"
+    }
+  ],
+  "model": {
+    "mode": "local",
+    "detail": "Deterministic investigator/critic heuristics; no LLM call."
+  },
+  "memory": {
+    "mode": "official-hmem-reference",
+    "detail": "Retrieved earlier verified observations and rechecked suggested services.",
+    "matches": [],
+    "trace": {
+      "retrievalReason": "Focused recall across 2 distinct observed services",
+      "strategy": "minimal",
+      "scores": {},
+      "engine": "Meterless H-MEM reference",
+      "revision": "1742dec56a66e58eef9dda2d2b865823758ca8cd",
+      "excludedIncident": "IC-001",
+      "eligibleServiceScope": [
+        "frontend-external",
+        "checkoutservice"
+      ],
+      "eligibleCount": 0,
+      "embedding": "upstream deterministic 64-dimensional FNV-1a lexical embedding (not neural)",
+      "focused_queries": 2,
+      "queries": [
+        {
+          "retrievalReason": "hybrid ranking for \"resource latency incident baseline dependency frontend-external error\" (domain: general)",
+          "strategy": "minimal",
+          "scores": {},
+          "engine": "Meterless H-MEM reference",
+          "revision": "1742dec56a66e58eef9dda2d2b865823758ca8cd",
+          "excludedIncident": "IC-001",
+          "eligibleServiceScope": [
+            "frontend-external"
+          ],
+          "eligibleCount": 0,
+          "embedding": "upstream deterministic 64-dimensional FNV-1a lexical embedding (not neural)"
+        },
+        {
+          "retrievalReason": "hybrid ranking for \"resource latency incident baseline dependency checkoutservice cpu\" (domain: general)",
+          "strategy": "minimal",
+          "scores": {},
+          "engine": "Meterless H-MEM reference",
+          "revision": "1742dec56a66e58eef9dda2d2b865823758ca8cd",
+          "excludedIncident": "IC-001",
+          "eligibleServiceScope": [
+            "checkoutservice"
+          ],
+          "eligibleCount": 0,
+          "embedding": "upstream deterministic 64-dimensional FNV-1a lexical embedding (not neural)"
+        }
+      ]
+    }
+  },
+  "created_at": "2026-10-25T07:53:19.253478+00:00",
+  "initial_service": "frontend-external",
+  "coverage": [
+    {
+      "kind": "metrics",
+      "first_ts": 1708474641.0,
+      "last_ts": 1708475570.0,
+      "observations": 6956
+    },
+    {
+      "kind": "logs",
+      "first_ts": 1708474641.0,
+      "last_ts": 1708475533.0,
+      "observations": 500
+    },
+    {
+      "kind": "traces",
+      "first_ts": 1708474641.000683,
+      "last_ts": 1708475399.561999,
+      "observations": 5000
+    }
+  ],
+  "supporting_evidence_ids": [
+    "E02",
+    "E03",
+    "E04",
+    "E09"
+  ],
+  "counterevidence_ids": [
+    "E17"
+  ],
+  "counterevidence": [
+    {
+      "summary": "Other measured metrics did not meet the increase threshold. Stable or decreasing measurements weaken a broad saturation explanation.",
+      "evidence_ids": [
+        "E17"
+      ]
+    }
+  ]
+}

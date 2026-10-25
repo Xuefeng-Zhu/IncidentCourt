@@ -1,0 +1,2 @@
+# Optional importer dependency. The application runtime uses the standard library.
+pyarrow==23.0.1

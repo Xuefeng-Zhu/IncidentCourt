@@ -1,0 +1,136 @@
+{
+  "repository": "phamquiluan/RCAEval",
+  "revision": "afeacb11bcc94dadfd1c8f483ee4377b2b8b614e",
+  "license": "MIT",
+  "source_kind": "controlled fault-injection experiment",
+  "synthetic_additions": false,
+  "selection": "Smallest complete RE2-OB cases by log+trace row count, distinct injected services",
+  "maximum_bytes": 52428800,
+  "incidents": [
+    {
+      "id": "IC-001",
+      "split": "development",
+      "files": {
+        "metrics": {
+          "bytes": 127755,
+          "sha256": "11f2df96b6b2b60a9600bacd8d3163b2f31a614aa756c19adfc51a41bcbebfc7",
+          "source_rows": 930
+        },
+        "logs": {
+          "bytes": 191241,
+          "sha256": "36fd5701f2d6e1f2d93131985d6feae5e284bdcbb21828ef9f3e90271a79f6b7",
+          "source_rows": 110067
+        },
+        "traces": {
+          "bytes": 5426555,
+          "sha256": "f833e959286b706b60307fc3beca2980f26a0dda62782362dbcb34e7f696b3d1",
+          "source_rows": 199960
+        }
+      },
+      "rows": {
+        "metrics": 68820,
+        "logs": 110067,
+        "traces": 199960
+      },
+      "missing_metric_values": 1974,
+      "coverage": {
+        "metrics": {
+          "start_ts": 1708474641.0,
+          "end_ts": 1708475570.0
+        },
+        "logs": {
+          "start_ts": 1708474641.0,
+          "end_ts": 1708475533.0
+        },
+        "traces": {
+          "start_ts": 1708474641.000683,
+          "end_ts": 1708475399.561999
+        }
+      }
+    },
+    {
+      "id": "IC-002",
+      "split": "holdout",
+      "files": {
+        "metrics": {
+          "bytes": 150383,
+          "sha256": "53a3f66825f8e01efd8ca78931c5cc9e3d2e7c900845c885aa25d8b33c37bce4",
+          "source_rows": 1441
+        },
+        "logs": {
+          "bytes": 207743,
+          "sha256": "eb3419ac6dc8f6b21af6f75f68ea9ec4fe1f70b4a8b0e9b021d792a7b368bdc9",
+          "source_rows": 117601
+        },
+        "traces": {
+          "bytes": 6972318,
+          "sha256": "4f71566bc777b122a4abdab69d12abdbdd57d6493eb3a2957692ed00a3b57b4a",
+          "source_rows": 254889
+        }
+      },
+      "rows": {
+        "metrics": 103752,
+        "logs": 117601,
+        "traces": 254889
+      },
+      "missing_metric_values": 916,
+      "coverage": {
+        "metrics": {
+          "start_ts": 1705342110.0,
+          "end_ts": 1705343550.0
+        },
+        "logs": {
+          "start_ts": 1705342110.0,
+          "end_ts": 1705343548.0
+        },
+        "traces": {
+          "start_ts": 1705342110.001999,
+          "end_ts": 1705343549.558894
+        }
+      }
+    },
+    {
+      "id": "IC-003",
+      "split": "holdout",
+      "files": {
+        "metrics": {
+          "bytes": 162150,
+          "sha256": "a31419d13452d1c969f8dd22ab82089fe77c8fa3ae2ca4aadeb17180849f17fc",
+          "source_rows": 1441
+        },
+        "logs": {
+          "bytes": 223888,
+          "sha256": "aaa390fe2f92a3ae646fb59a6c2069e4a3f9fd789aa3d86f939656d2e55bc366",
+          "source_rows": 131836
+        },
+        "traces": {
+          "bytes": 7734168,
+          "sha256": "ebba409588650edab31d79d02819af64edbf3e17e5359f320893fc30f9b8fea7",
+          "source_rows": 286200
+        }
+      },
+      "rows": {
+        "metrics": 106634,
+        "logs": 131836,
+        "traces": 286200
+      },
+      "missing_metric_values": 1214,
+      "coverage": {
+        "metrics": {
+          "start_ts": 1705388221.0,
+          "end_ts": 1705389661.0
+        },
+        "logs": {
+          "start_ts": 1705388221.0,
+          "end_ts": 1705389661.0
+        },
+        "traces": {
+          "start_ts": 1705388221.062,
+          "end_ts": 1705389660.895141
+        }
+      }
+    }
+  ],
+  "total_source_bytes": 21225701,
+  "database_sha256": "51ff5838b7c57550d824febd93caecb0487902d93da94c84952f145c2acaab26"
+}

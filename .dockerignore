@@ -1,0 +1,13 @@
+.git
+.env*
+data/raw
+data/private
+data/staging
+data/*.sqlite3*
+data/memory*
+artifacts
+logs
+work
+.venv
+**/node_modules
+**/__pycache__

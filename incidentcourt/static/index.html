@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f4f5f7">
+  <title>IncidentCourt — Investigations</title>
+  <link rel="stylesheet" href="/static/styles.css">
+  <script src="/static/app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to investigation</a>
+  <div class="workspace">
+    <aside class="sidebar" aria-label="Investigation controls">
+      <a class="brand" href="/" aria-label="IncidentCourt home">
+        <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3Zm8 0v5h4M9 12h6M9 16h6"/></svg></span>
+        <span>IncidentCourt</span>
+      </a>
+      <form id="investigation-form">
+        <div class="incident-control">
+          <label class="field-label" for="incident-select">Incident</label>
+          <div class="select-wrap"><select id="incident-select" name="incident_id" disabled><option value="">Loading records…</option></select></div>
+          <p class="incident-meta" id="incident-meta">Loading telemetry.</p>
+        </div>
+        <div class="engine-control">
+          <label class="field-label" for="model-select">Execution</label>
+          <div class="select-wrap"><select id="model-select" name="model"><option value="local">Deterministic · no model</option><option value="nightshift" disabled>Nightshift · unavailable</option></select></div>
+          <p class="engine-note" id="engine-note">No model inference.</p>
+        </div>
+        <button class="run-button" id="run-button" type="submit" disabled><span>Run investigation</span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
+      </form>
+      <button type="button" class="open-record-button" id="open-record-button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7h7l2 2h9v11H3V7Zm0 0V4h7l2 3"/></svg>Open saved record</button>
+      <input type="file" id="saved-record-input" accept="application/json,.json" hidden aria-label="Open saved investigation record">
+      <details class="connections" aria-label="Integration status">
+        <summary>Connections <span>Details</span></summary>
+        <div id="connection-list" class="connection-list"><p class="connection-loading">Reading configuration…</p></div>
+        <div id="last-verified" class="last-verified" hidden>
+          <h3>Last verified run</h3>
+          <p id="last-verified-time"></p><p id="last-verified-model"></p><p id="last-verified-counts"></p>
+          <small>Recorded verification; current connectivity is not rechecked.</small>
+        </div>
+      </details>
+      <div class="sidebar-footer"><span class="workspace-dot" aria-hidden="true"></span>Local workspace</div>
+    </aside>
+    <main id="main-content" tabindex="-1">
+      <header class="topbar"><h1>Investigations</h1><span class="local-badge" id="execution-badge">No record open</span></header>
+      <div class="main-inner">
+        <div class="error-banner" id="error-banner" role="alert" hidden><div><strong id="error-title">Investigation could not finish</strong><p id="error-message"></p></div><button type="button" id="retry-button">Try again</button></div>
+        <section class="empty-state" id="empty-state" aria-labelledby="empty-title">
+          <div class="empty-heading"><h2 id="empty-title">Incident records</h2><p>Select an incident to investigate, or open a saved record.</p></div>
+          <div class="incident-table-wrap">
+            <table class="incident-table">
+              <thead><tr><th scope="col">Incident</th><th scope="col" class="dataset-cell">Dataset</th><th scope="col">Observed window · UTC</th><th scope="col">Split</th></tr></thead>
+              <tbody id="incident-list"><tr><td colspan="4" class="table-loading">Loading incident records…</td></tr></tbody>
+            </table>
+          </div>
+          <div class="archive-note">Metrics, logs and traces from controlled RCAEval experiments.</div>
+        </section>
+        <section id="loading-state" class="loading-state" hidden aria-live="polite"><div class="loading-symbol" aria-hidden="true"></div><h2>Investigation running</h2><p>Querying telemetry and checking evidence.</p><small>The report will appear when the run finishes.</small></section>
+        <section id="report-workspace" hidden aria-label="Investigation results">
+          <div id="saved-record-note" class="saved-record-note" hidden role="status"><strong>Saved record</strong><span id="saved-record-detail"></span><p>Original results. No new queries or model calls.</p></div>
+          <div class="record-header">
+            <div><div class="eyebrow" id="record-source"></div><h2 id="record-title">Investigation record</h2><p id="record-meta" class="record-meta"></p></div>
+            <button type="button" id="export-button" class="outline-button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>Export JSON</button>
+          </div>
+          <div class="record-statbar" id="record-statbar"></div>
+          <div class="tabs" role="tablist" aria-label="Investigation views">
+            <button class="tab active" id="tab-report" type="button" role="tab" aria-selected="true" aria-controls="panel-report" data-tab="report">Report</button>
+            <button class="tab" id="tab-evidence" type="button" role="tab" aria-selected="false" aria-controls="panel-evidence" tabindex="-1" data-tab="evidence">Evidence <span id="evidence-count">0</span></button>
+            <button class="tab" id="tab-trail" type="button" role="tab" aria-selected="false" aria-controls="panel-trail" tabindex="-1" data-tab="trail">Query trail <span id="query-count">0</span></button>
+          </div>
+          <div id="panel-report" class="tab-panel" role="tabpanel" aria-labelledby="tab-report"></div>
+          <div id="panel-evidence" class="tab-panel" role="tabpanel" aria-labelledby="tab-evidence" hidden>
+            <div class="panel-heading"><h3>Evidence</h3><div class="filter-group" role="group" aria-label="Filter evidence"><button type="button" class="filter active" data-filter="all" aria-pressed="true">All</button><button type="button" class="filter" data-filter="metrics" aria-pressed="false">Metrics</button><button type="button" class="filter" data-filter="logs" aria-pressed="false">Logs</button><button type="button" class="filter" data-filter="traces" aria-pressed="false">Traces</button></div></div>
+            <div id="evidence-list"></div>
+          </div>
+          <div id="panel-trail" class="tab-panel" role="tabpanel" aria-labelledby="tab-trail" hidden>
+            <div class="panel-heading"><h3>Investigation steps</h3></div><div id="step-list"></div>
+            <div class="query-heading"><h3>Executed SQL</h3><p>Queries and returned row counts.</p></div><div id="query-list"></div>
+          </div>
+        </section>
+        <footer class="main-footer"><span>IncidentCourt</span><span>RCAEval RE2-OB</span></footer>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

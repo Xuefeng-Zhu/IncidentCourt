@@ -1,0 +1,2 @@
+# No Python packages: stdlib HTTP + subprocess bridge to pinned Meterless reference.
+# Runtime prerequisite: Node.js >=24, using --experimental-transform-types.

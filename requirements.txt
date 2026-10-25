@@ -1,0 +1,2 @@
+# Python 3.12+ standard library and Node.js 24+ are sufficient to run sample mode.
+# To regenerate the larger research subset, install requirements-data.txt.

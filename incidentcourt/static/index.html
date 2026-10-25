@@ -1,65 +1,31 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="color-scheme" content="light">
-  <meta name="theme-color" content="#f4f5f7">
-  <title>IncidentCourt — Investigations</title>
-  <link rel="stylesheet" href="/static/styles.css">
-  <script src="/static/app.js" defer></script>
-</head>
-<body>
-  <a class="skip-link" href="#main-content">Skip to investigation</a>
-  <div class="workspace">
-    <aside class="sidebar" aria-label="Investigation controls">
-      <a class="brand" href="/" aria-label="IncidentCourt home">
-        <span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3Zm8 0v5h4M9 12h6M9 16h6"/></svg></span>
-        <span>IncidentCourt</span>
-      </a>
-      <form id="investigation-form">
-        <div class="incident-control">
-          <label class="field-label" for="incident-select">Incident</label>
-          <div class="select-wrap"><select id="incident-select" name="incident_id" disabled><option value="">Loading records…</option></select></div>
-          <p class="incident-meta" id="incident-meta">Loading telemetry.</p>
-        </div>
-        <div class="engine-control">
-          <label class="field-label" for="model-select">Execution</label>
-          <div class="select-wrap"><select id="model-select" name="model"><option value="local">Deterministic · no model</option><option value="nightshift" disabled>Nightshift · unavailable</option></select></div>
-          <p class="engine-note" id="engine-note">No model inference.</p>
-        </div>
-        <button class="run-button" id="run-button" type="submit" disabled><span>Run investigation</span><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 12h14m-5-5 5 5-5 5"/></svg></button>
-      </form>
-      <button type="button" class="open-record-button" id="open-record-button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 7h7l2 2h9v11H3V7Zm0 0V4h7l2 3"/></svg>Open saved record</button>
-      <input type="file" id="saved-record-input" accept="application/json,.json" hidden aria-label="Open saved investigation record">
-      <details class="connections" aria-label="Integration status">
-        <summary>Connections <span>Details</span></summary>
-        <div id="connection-list" class="connection-list"><p class="connection-loading">Reading configuration…</p></div>
-        <div id="last-verified" class="last-verified" hidden>
-          <h3>Last verified run</h3>
-          <p id="last-verified-time"></p><p id="last-verified-model"></p><p id="last-verified-counts"></p>
-          <small>Recorded verification; current connectivity is not rechecked.</small>
-        </div>
-      </details>
-      <div class="sidebar-footer"><span class="workspace-dot" aria-hidden="true"></span>Local workspace</div>
-    </aside>
-    <main id="main-content" tabindex="-1">
-      <header class="topbar"><h1>Investigations</h1><span class="local-badge" id="execution-badge">No record open</span></header>
-      <div class="main-inner">
-        <div class="error-banner" id="error-banner" role="alert" hidden><div><strong id="error-title">Investigation could not finish</strong><p id="error-message"></p></div><button type="button" id="retry-button">Try again</button></div>
-        <section class="empty-state" id="empty-state" aria-labelledby="empty-title">
-          <div class="empty-heading"><h2 id="empty-title">Incident records</h2><p>Select an incident to investigate, or open a saved record.</p></div>
-          <div class="incident-table-wrap">
-            <table class="incident-table">
-              <thead><tr><th scope="col">Incident</th><th scope="col" class="dataset-cell">Dataset</th><th scope="col">Observed window · UTC</th><th scope="col">Split</th></tr></thead>
-              <tbody id="incident-list"><tr><td colspan="4" class="table-loading">Loading incident records…</td></tr></tbody>
-            </table>
-          </div>
-          <div class="archive-note">Metrics, logs and traces from controlled RCAEval experiments.</div>
-        </section>
-        <section id="loading-state" class="loading-state" hidden aria-live="polite"><div class="loading-symbol" aria-hidden="true"></div><h2>Investigation running</h2><p>Querying telemetry and checking evidence.</p><small>The report will appear when the run finishes.</small></section>
-        <section id="report-workspace" hidden aria-label="Investigation results">
-          <div id="saved-record-note" class="saved-record-note" hidden role="status"><strong>Saved record</strong><span id="saved-record-detail"></span><p>Original results. No new queries or model calls.</p></div>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="theme-color" content="#f4f5f7"><title>IncidentCourt — Workspace</title><link rel="stylesheet" href="/static/styles.css"><script src="/static/app.js" defer></script></head>
+<body><a class="skip-link" href="#main-content">Skip to workspace</a><div class="workspace">
+<aside class="sidebar" aria-label="Workspace navigation">
+<a class="brand" href="#/incidents"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3Zm8 0v5h4M9 12h6M9 16h6"/></svg></span><span>IncidentCourt</span></a>
+<nav class="workspace-nav" aria-label="Main navigation"><a id="nav-incidents" href="#/incidents"><span>Incidents</span><span id="nav-review-count" class="nav-count"></span></a><a id="nav-investigations" href="#/investigations">Investigations</a><a id="nav-settings" href="#/settings">Settings</a></nav>
+<a id="active-run-link" class="active-run-link" hidden></a>
+<div class="sidebar-footer"><span class="workspace-dot" aria-hidden="true"></span><div>Personal workspace<span id="sidebar-source"></span></div></div>
+</aside>
+<main id="main-content" tabindex="-1"><header class="topbar"><div id="breadcrumbs" class="breadcrumb">Incidents</div><span id="execution-badge" class="local-badge"></span></header>
+<div class="main-inner">
+<div id="error-banner" class="error-banner" role="alert" hidden><div><strong id="error-title">Could not complete this action</strong><p id="error-message"></p></div><button id="dismiss-error" type="button">Dismiss</button></div>
+<section id="view-incidents" class="workspace-view" hidden>
+<div class="view-heading"><div><h1>Incidents</h1><p>Investigate a case. Review what the evidence supports.</p></div><button id="refresh-cases" class="outline-button" type="button">Refresh telemetry</button></div>
+<div class="queue-context"><span id="queue-counts"></span><span id="catalog-state"></span></div>
+<div class="list-toolbar"><label class="search-field"><span class="sr-only">Search incidents</span><input id="case-search" type="search" placeholder="Search incidents or services…" autocomplete="off"></label><label><span class="sr-only">Filter incidents by status</span><select id="case-status"><option>All statuses</option><option>Needs investigation</option><option>Running</option><option>Needs review</option><option>Reviewed</option><option>Failed</option></select></label></div>
+<div class="product-table-wrap"><table class="product-table"><thead><tr><th>Incident / observed window</th><th>Status</th><th class="candidate-col">Latest assessment</th><th class="last-run-col">Last investigated</th></tr></thead><tbody id="case-rows"></tbody></table></div>
+<p id="queue-empty" class="no-items" hidden>No incidents match these filters.</p>
+<p class="archive-note">RCAEval archive · Controlled experiments, not a production alert feed.</p>
+</section>
+<section id="view-case" class="workspace-view" hidden><div class="view-heading"><div><h1 id="case-title"></h1><p id="case-subtitle"></p></div><div class="case-actions"><button id="case-new-run" class="primary-button" type="button" disabled>New investigation</button></div></div><p id="case-run-note" class="action-note"></p><div id="case-overview"></div><h2 class="list-heading">Investigation history</h2><div id="case-history"></div></section>
+<section id="view-library" class="workspace-view" hidden><div class="view-heading"><div><h1>Investigations</h1><p>Completed findings, review notes, and interrupted work.</p></div><button id="import-button" class="outline-button" type="button">Import JSON</button></div><div class="list-toolbar"><label class="search-field"><span class="sr-only">Search investigations</span><input id="library-search" type="search" placeholder="Search by incident, service, or run…"></label><label><span class="sr-only">Filter investigations</span><select id="library-filter"><option>All investigations</option><option>Needs review</option><option>Reviewed</option><option>Imported</option><option>Running</option><option>Failed</option></select></label></div><div id="library-list"></div></section>
+<section id="view-investigation" class="workspace-view" hidden>
+<div id="run-toolbar" class="run-toolbar"><span id="run-origin"></span><button id="review-jump" class="text-button" type="button" hidden>Review notes ↓</button></div>
+<div id="run-progress" class="run-progress" hidden aria-live="polite"><div class="loading-symbol" aria-hidden="true"></div><div><h1 id="run-stage"></h1><p id="run-query-count"></p><p class="muted">You can leave this page. The investigation continues on this server.</p></div></div>
+<div id="run-failure" class="run-failure" hidden><h1 id="failure-title"></h1><p id="failure-message"></p><a id="failure-case-link" class="text-link">Return to incident</a><p class="muted">No automatic restart or retry was requested.</p></div>
+<div class="investigation-layout"><div class="report-main">        <section id="report-workspace" hidden aria-label="Investigation results">
+          <div id="saved-record-note" class="saved-record-note" hidden role="status"><strong>Imported snapshot</strong><span id="saved-record-detail"></span><p>Source identity is unverified. This snapshot is not linked to the case queue.</p></div>
           <div class="record-header">
             <div><div class="eyebrow" id="record-source"></div><h2 id="record-title">Investigation record</h2><p id="record-meta" class="record-meta"></p></div>
             <button type="button" id="export-button" class="outline-button"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3v12m-4-4 4 4 4-4M5 16v4h14v-4"/></svg>Export JSON</button>
@@ -80,9 +46,10 @@
             <div class="query-heading"><h3>Executed SQL</h3><p>Queries and returned row counts.</p></div><div id="query-list"></div>
           </div>
         </section>
-        <footer class="main-footer"><span>IncidentCourt</span><span>RCAEval RE2-OB</span></footer>
-      </div>
-    </main>
-  </div>
-</body>
-</html>
+</div><aside id="review-panel" class="review-panel" hidden aria-labelledby="review-heading"><div class="review-panel-heading"><h2 id="review-heading">Your review</h2><span id="review-state" class="status-chip"></span></div><p class="review-description">Private notes. The original report stays unchanged.</p><label for="review-note">Notes</label><textarea id="review-note" rows="10" maxlength="8000" placeholder="What did you verify? What needs a closer look?"></textarea><label class="review-toggle"><input id="reviewed" type="checkbox">Mark this run reviewed</label><button id="save-review" class="primary-button" type="button">Save review</button><p id="review-feedback" class="review-feedback" role="status"></p></aside></div>
+</section>
+<section id="view-settings" class="workspace-view" hidden><div class="view-heading"><div><h1>Workspace settings</h1><p>Data source and execution availability for this workspace.</p></div><button id="check-connections" class="outline-button" type="button">Check connections</button></div><div id="settings-content"></div><div id="connection-results" class="connection-results" role="status" hidden></div><p class="archive-note">Connection checks read metadata only. They do not start model inference.</p></section>
+<div id="page-loading" class="page-loading" hidden role="status">Loading workspace…</div>
+<input id="saved-record-input" type="file" accept="application/json,.json" hidden aria-label="Import investigation JSON">
+<footer class="main-footer"><span>IncidentCourt</span><span>Personal investigation workspace</span></footer>
+</div></main></div></body></html>

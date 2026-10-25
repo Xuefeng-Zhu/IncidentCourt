@@ -2,9 +2,17 @@
 
 ## Current status — October 25, 2026
 
-Work only in `/Users/frank/mygit/IncidentCourt`. The projectless Codex bootstrap folder is not the application repository. PromptDock is unrelated: do not modify it or copy its environment. The local Git repository is still on `main`, with uncommitted source files and no origin remote. If an origin is later configured, fetch and safely fast-forward the local base before new repository work. Ready-for-review PRs are the default only when PR creation is requested. No push, publication, deployment or submission is authorized. If a new worktree is needed, copy only matching ignored `.env*` files from IncidentCourt's main checkout before local app/auth verification; never print their values.
+Work only in `/Users/frank/mygit/IncidentCourt`. The projectless Codex bootstrap folder is not the application repository. PromptDock is unrelated: do not modify it or copy its environment. The repository now has private origin `https://github.com/Xuefeng-Zhu/IncidentCourt.git`; the user explicitly approved its creation and baseline push. Commit `9e178e5` is on origin/main. The persistent-workspace implementation follows that baseline locally; further pushes require user instruction. Fetch and safely fast-forward before new repository work. No application deployment or hackathon submission is authorized. If a new worktree is needed, copy only matching ignored `.env*` files from IncidentCourt's main checkout before local app/auth verification; never print their values.
 
 The requested complete live sponsor path has now passed through the command-line verifier: **Zetaris SQL → Nightshift → hosted NVIDIA Nemotron 3.5 Lightning + official H-MEM**. The receipt at `artifacts/private/live-flow-20261025-nvidia-01/receipt.json` reports all 11 layers passed. The actual saved live target record was imported in the browser, with citation row expansion, query-trail review and JSON export matching the original record. No browser-triggered generation was performed. No accuracy, production-readiness or deployment claim follows from this pass.
+
+## Persistent product workspace
+
+The UI now uses Incidents → case history → persistent investigation pages, with separate personal notes and per-run review state. Reports remain immutable. Settings contains source/model details and explicit metadata-only checks. JSON import is a secondary library action and never links unknown snapshots into the case queue.
+
+`incidentcourt/workspace.py` owns the ignored, private SQLite registry, source partitioning, bounded report imports, review-version conflicts, and background jobs. New HTTP routes are documented in README. A single process/active job shares the existing execution lock. Real progress callbacks report actual phases and completed SQL counts; interrupted jobs never restart automatically. CLI and existing synchronous endpoints remain compatible.
+
+The two existing hash-verified live reports bootstrap once as unreviewed history. Current browser testing verified notes/review persistence across page and server restart; temporary QA notes/review flags were restored afterward. Isolated offline QA exercised an actual sample investigation through the background API while navigating/reloading, then observed one completed unreviewed run. Imported snapshots persisted without changing queue membership. The final suite passed 110 tests. Desktop/390px/320px browser checks passed with no document overflow or console warnings/errors. The real app remains on port 8317; the isolated offline QA server was stopped. No additional hosted inference was sent.
 
 ## Verified setup and remaining acceptance
 

@@ -70,7 +70,7 @@ if (typeof module === 'object' && module.exports) module.exports = { validateSav
 
 if (typeof document !== 'undefined') (() => {
   const $ = id => document.getElementById(id);
-  const state = { incidents: [], report: null, busy: false, filter: 'all', status: null, loaded: false, modelChosen: false, savedRecord: false, retryAction: 'run' };
+  const state = { incidents: [], catalog: {cases:[],context:{}}, runs: [], status: null, report: null, current: null, filter: 'all', route: '', routeToken: 0, dirty: false, reviewVersion: 0, refreshBusy: false, starting: false, requestKeys: new Map() };
   const el = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -104,194 +104,6 @@ if (typeof document !== 'undefined') (() => {
   const modelLabel = value => String(value || '').startsWith('nvidia/nemotron-3.5-lightning') ? 'NVIDIA Nemotron 3.5 Lightning' : String(value || '').startsWith('nvidia/nemotron-3-super') ? 'NVIDIA Nemotron 3 Super' : value ? `${String(value).split('/')[0]} hosted model` : 'Model not recorded';
   const confidence = value => text(value);
   const normalizeKind = kind => ({ metric: 'metrics', log: 'logs', trace: 'traces' }[String(kind).toLowerCase()] || String(kind).toLowerCase());
-
-  async function request(url, options = {}) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 180000);
-    try {
-      const response = await fetch(url, { ...options, signal: controller.signal, headers: { 'Accept': 'application/json', ...options.headers } });
-      const body = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        const detail = body.detail || body.error || `Request failed (${response.status}).`;
-        throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
-      }
-      return body;
-    } catch (error) {
-      if (error.name === 'AbortError') throw new Error('The request timed out. Check the server and provider status before trying again.');
-      throw error;
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  function showError(error, title = 'Investigation could not finish', retryAction = 'run') {
-    state.retryAction = retryAction;
-    $('error-title').textContent = title;
-    $('error-message').textContent = error.message || String(error);
-    $('error-banner').hidden = false;
-    $('error-banner').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }
-
-  function clearReport() {
-    state.report = null;
-    state.savedRecord = false;
-    $('saved-record-note').hidden = true;
-    $('report-workspace').hidden = true;
-    $('empty-state').hidden = false;
-    $('error-banner').hidden = true;
-    $('execution-badge').textContent = 'No record open';
-  }
-
-  function renderIncidentList() {
-    const target = $('incident-list');
-    if (!target) return;
-    target.replaceChildren();
-    for (const incident of state.incidents) {
-      const selected = String(incident.id) === $('incident-select').value;
-      const row = el('tr', `incident-row${selected ? ' selected' : ''}`);
-      const name = el('td', 'incident-cell');
-      const button = el('button', 'incident-button', incident.id);
-      button.type = 'button';
-      button.value = String(incident.id);
-      button.setAttribute('aria-label', `Select incident ${incident.id}`);
-      button.setAttribute('aria-current', String(selected));
-      button.addEventListener('click', () => {
-        if (state.busy) return;
-        if ($('incident-select').value !== String(incident.id)) {
-          $('incident-select').value = String(incident.id);
-          clearReport();
-          updateIncident();
-        }
-      });
-      name.append(button);
-      const title = incidentTitle(incident);
-      if (title && title !== incident.id) name.append(el('span', 'incident-title', title));
-      const window = windowParts(incident.start_ts, incident.end_ts);
-      const observed = el('td', 'window-cell');
-      observed.append(el('span', 'window-date', window.day), el('span', 'window-time', window.time));
-      row.append(name, el('td', 'dataset-cell', incident.source || 'Not recorded'), observed, el('td', 'split-cell', splitLabel(incident.split)));
-      target.append(row);
-    }
-    if (!state.incidents.length) {
-      const row = el('tr', 'incident-row');
-      const cell = el('td', 'no-items', 'No incidents available.');
-      cell.colSpan = 4;
-      row.append(cell);
-      target.append(row);
-    }
-  }
-
-  function renderIncidentSelect() {
-    const select = $('incident-select');
-    const selected = selectedIncidentId(state.incidents, state.report?.incident_id, select.value);
-    select.replaceChildren();
-    for (const incident of state.incidents) {
-      const title = incidentTitle(incident);
-      const option = el('option', '', incident.id + (title && title !== incident.id ? ` · ${title}` : ''));
-      option.value = String(incident.id);
-      select.append(option);
-    }
-    if (selected && !state.incidents.some(item => String(item.id) === selected)) {
-      const option = el('option', '', `${selected} · Saved record`);
-      option.value = selected;
-      select.append(option);
-    }
-    if (!selected && !state.incidents.length) select.append(el('option', '', state.loaded ? 'No incidents imported' : 'Records unavailable'));
-    select.value = selected;
-    select.disabled = state.busy || !state.incidents.length;
-    updateIncident();
-  }
-
-  function updateIncident() {
-    const incident = state.incidents.find(item => String(item.id) === $('incident-select').value);
-    const window = incident ? windowParts(incident.start_ts, incident.end_ts) : null;
-    $('incident-meta').textContent = incident ? `${incident.source || 'Telemetry archive'} · ${splitLabel(incident.split)}\n${window.day} · ${window.time}` : state.report ? `Saved ${state.report.incident_id} · archive metadata unavailable.` : 'No incident records available.';
-    renderIncidentList();
-    updateRunAvailability();
-  }
-
-  function updateRunAvailability() {
-    const incident = state.incidents.some(item => String(item.id) === $('incident-select').value);
-    $('run-button').disabled = state.busy || !incident || !canExecuteInvestigation(state.status, $('model-select').value);
-  }
-
-  function updateEngineNote() {
-    const provider = state.status?.model || {};
-    if ($('model-select').value === 'nightshift') {
-      $('engine-note').textContent = provider.inference_enabled === true
-        ? 'Hosted inference enabled for authorized usage.'
-        : provider.mode === 'configured'
-          ? 'Hosted inference is off. Open a saved record.'
-          : 'Nightshift is not configured.';
-    } else $('engine-note').textContent = 'Deterministic rules; no model calls.';
-  }
-
-  function renderStatus(status) {
-    state.status = status;
-    const target = $('connection-list');
-    target.replaceChildren();
-    const names = { data: 'Zetaris', model: 'Nightshift', memory: 'H-MEM' };
-    for (const key of ['data', 'model', 'memory']) {
-      const item = status[key] || { mode: 'unknown', detail: 'Status is unavailable.' };
-      const mode = String(item.mode || 'unknown');
-      const row = el('div', 'connection-item' + (/^(verified|live|connected)$/.test(mode) ? ' live' : ''));
-      row.append(el('i', 'connection-dot'));
-      const label = key === 'data' ? ({ zetaris: 'Selected', sample: 'Offline sample', local: 'Local data', not_imported: 'No data' }[mode] || 'Unknown')
-        : key === 'model' ? (mode === 'configured' ? (item.inference_enabled === true ? 'Enabled' : 'Usage off') : 'Not set')
-        : mode === 'official-hmem-reference' ? 'Local reference' : 'Unavailable';
-      const name = el('div', 'connection-name');
-      name.append(el('span', 'connection-label', names[key]), el('span', 'connection-mode', label));
-      const detail = (item.detail || 'No details recorded.') + (key === 'model' && item.requested_model ? ` Model: ${item.requested_model}.` : '');
-      row.append(name, el('p', 'connection-detail', detail));
-      target.append(row);
-    }
-    const model = status.model || {};
-    const nightshift = $('model-select').querySelector('option[value="nightshift"]');
-    const local = $('model-select').querySelector('option[value="local"]');
-    const configured = model.mode === 'configured';
-    const offline = status.data?.mode === 'sample';
-    const enforceHosted = model.hosted_only === true && !offline;
-    nightshift.disabled = !configured || offline;
-    nightshift.textContent = offline ? 'Nightshift · offline' : configured ? (model.inference_enabled === true ? 'Nightshift' : 'Nightshift · off') : 'Nightshift · unavailable';
-    local.disabled = enforceHosted;
-    if (offline && !state.modelChosen) $('model-select').value = 'local';
-    else if (enforceHosted || (configured && !state.modelChosen)) $('model-select').value = 'nightshift';
-    else if (!configured && $('model-select').value === 'nightshift') $('model-select').value = 'local';
-    updateEngineNote();
-    updateRunAvailability();
-    const previous = status.last_verified;
-    $('last-verified').hidden = !previous;
-    if (previous) {
-      const checked = dateParts(previous.verified_at);
-      $('last-verified-time').textContent = checked ? `${checked.day}, ${checked.minutes} UTC` : 'Time not recorded';
-      $('last-verified-model').textContent = modelLabel(previous.physical_model);
-      $('last-verified-model').title = previous.physical_model || '';
-      $('last-verified-counts').textContent = `${previous.gateway_calls} model calls · ${previous.remote_selects} SQL queries`;
-    }
-
-  }
-
-  async function initialize() {
-    $('run-button').disabled = true;
-    const results = await Promise.allSettled([request('/api/status'), request('/api/incidents')]);
-    if (results[0].status === 'fulfilled') {
-      state.status = results[0].value;
-      renderStatus(state.status);
-    } else {
-      renderStatus({ data: { mode: 'unknown', detail: 'Could not read integration status.' } });
-    }
-    if (results[1].status === 'fulfilled') {
-      const incidents = Array.isArray(results[1].value) ? results[1].value : list(results[1].value.incidents);
-      state.incidents = incidents;
-      state.loaded = true;
-      renderIncidentSelect();
-      updateRecordMetadata();
-    } else {
-      renderIncidentSelect();
-      updateRecordMetadata();
-      if (!state.report) showError(results[1].reason);
-    }
-  }
 
   function switchTab(tab, focus = false) {
     for (const button of document.querySelectorAll('[data-tab]')) {
@@ -336,16 +148,15 @@ if (typeof document !== 'undefined') (() => {
 
   function updateRecordMetadata() {
     const report = state.report;
-    if (!report) return;
-    const incident = state.incidents.find(item => String(item.id) === String(report.incident_id)) || {};
-    const mode = report.mode || report.model?.mode || 'local';
-    $('execution-badge').textContent = state.savedRecord ? `Saved record · ${modeLabel(mode)}` : `${modeLabel(mode)} · complete`;
-    $('saved-record-note').hidden = !state.savedRecord;
-    $('saved-record-detail').textContent = `Original run · ${modeLabel(mode)}`;
-    $('record-source').textContent = incident.source || 'Investigation record';
+    const incident = state.incidents.find(item => item.id === report.incident_id) || {};
+    const imported = state.current.origin === 'imported';
+    $('execution-badge').textContent = modeLabel(report.mode);
+    $('saved-record-note').hidden = !imported;
+    $('saved-record-detail').textContent = modeLabel(report.mode);
+    $('record-source').textContent = incident.source || (imported ? 'Imported report' : state.catalog.context?.label || 'Investigation');
     const title = incidentTitle(incident);
-    $('record-title').textContent = (report.incident_id || 'Investigation record') + (title && title !== report.incident_id ? ` · ${title}` : '');
-    $('record-meta').textContent = `Run ${report.run_id || 'not recorded'} · ${date(report.created_at)}`;
+    $('record-title').textContent = report.incident_id + (title && title !== report.incident_id ? ` · ${title}` : '');
+    $('record-meta').textContent = `Run ${report.run_id} · ${date(report.created_at)}`;
   }
 
   function renderReport() {
@@ -528,121 +339,235 @@ if (typeof document !== 'undefined') (() => {
     }
   }
 
-  async function runInvestigation() {
-    if (state.busy || !$('incident-select').value || !canExecuteInvestigation(state.status, $('model-select').value)) return;
-    state.busy = true;
-    state.savedRecord = false;
-    $('open-record-button').disabled = true;
-    $('run-button').disabled = true;
-    $('incident-select').disabled = true;
-    $('model-select').disabled = true;
-    $('run-button').querySelector('span').textContent = 'Investigating…';
-    $('error-banner').hidden = true;
-    $('empty-state').hidden = true;
-    $('report-workspace').hidden = true;
-    $('loading-state').hidden = false;
+  async function request(url, options = {}) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
     try {
-      const report = await request('/api/investigate', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ incident_id: $('incident-select').value, model: $('model-select').value }) });
-      if (!report || !report.incident_id) throw new Error('The server returned an incomplete investigation record.');
-      state.report = report;
-      state.filter = 'all';
-      updateFilter();
-      renderReport();
-      $('report-workspace').hidden = false;
+      const response = await fetch(url, { ...options, signal: controller.signal, headers: { Accept: 'application/json', ...(options.body ? {'Content-Type':'application/json'} : {}), ...options.headers } });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(body.error || 'The workspace could not complete this request.');
+        error.details = body; error.status = response.status; throw error;
+      }
+      return body;
     } catch (error) {
-      state.report = null;
-      $('empty-state').hidden = false;
-      showError(error);
-    } finally {
-      state.busy = false;
-      $('open-record-button').disabled = false;
-      $('loading-state').hidden = true;
-      $('incident-select').disabled = !state.incidents.length;
-      $('model-select').disabled = false;
-      updateRunAvailability();
-      $('run-button').querySelector('span').textContent = 'Run investigation';
+      if (error.name === 'AbortError') throw new Error('The request timed out. Saved work is retained.');
+      throw error;
+    } finally { clearTimeout(timeout); }
+  }
+  const post = (url, value = {}) => request(url, {method:'POST', body:JSON.stringify(value)});
+  function showError(error) {
+    $('error-title').textContent = 'Could not complete this action';
+    $('error-message').textContent = error.message || 'Workspace unavailable.';
+    $('error-banner').hidden = false;
+  }
+  function link(label, route, className = 'text-link') {
+    const item = el('a', className, label); item.href = '#' + route; return item;
+  }
+  const statusName = run => run.state === 'completed' ? (run.reviewed_at ? 'Reviewed' : 'Needs review') : ({queued:'Running',running:'Running',failed:'Failed',interrupted:'Interrupted'}[run.state] || run.state);
+  function chip(label) { const item = el('span','status-chip',label); item.dataset.status = label; return item; }
+  function clear(node) { node.replaceChildren(); return node; }
+  function heading(title, description) {
+    const wrap=el('div','compact-heading');wrap.append(el('h2','',title));if(description)wrap.append(el('p','muted',description));return wrap;
+  }
+  function canStart() {
+    return state.catalog.context?.mode === 'sample' || state.status?.model?.inference_enabled === true && state.status?.model?.hosted_only === true;
+  }
+  function updateGlobals() {
+    $('sidebar-source').textContent=state.catalog.context?.label || 'Source not loaded';
+    const count=state.catalog.cases.filter(c=>c.status==='Needs review').length;
+    $('nav-review-count').textContent=count || '';
+    const active=state.catalog.active;
+    $('active-run-link').hidden=!active;
+    if(active){$('active-run-link').href='#/investigations/'+active.id;$('active-run-link').textContent=`${active.incident_id} · ${active.stage}`;}
+  }
+  async function loadCatalog() {
+    state.catalog=await request('/api/cases');state.incidents=state.catalog.cases;updateGlobals();
+  }
+  async function loadRuns() {state.runs=(await request('/api/investigations')).investigations;}
+  function renderQueue() {
+    const term=$('case-search').value.trim().toLowerCase(), filter=$('case-status').value;
+    const cases=state.catalog.cases.filter(c=>(filter==='All statuses'||c.status===filter)&&[c.id,c.title,c.completed?.candidate].join(' ').toLowerCase().includes(term));
+    const body=clear($('case-rows'));
+    for(const c of cases){
+      const row=el('tr');const name=el('td');name.append(link(c.id,'/incidents/'+c.id,'case-id'),el('span','row-title',incidentTitle(c)||'Incident'));
+      const window=windowParts(c.start_ts,c.end_ts);name.append(el('span','row-meta',window.day+(window.time?' · '+window.time:'')));
+      if(c.completed?.candidate)name.append(el('span','mobile-candidate',c.completed.candidate));
+      const status=el('td');status.append(chip(c.status));
+      const candidate=el('td','candidate-col');candidate.append(el('span','service-name',c.completed?.candidate||'—'));
+      if(c.completed)candidate.append(el('span','row-meta',c.completed.confidence ? `Confidence: ${c.completed.confidence}` : ''));
+      const last=el('td','last-run-col',c.completed?date(c.completed.created_at):'Not investigated');
+      row.append(name,status,candidate,last);body.append(row);
+    }
+    $('queue-empty').hidden=cases.length>0;
+    const total=state.catalog.cases.length, review=state.catalog.cases.filter(c=>c.status==='Needs review').length;
+    $('queue-counts').textContent=`${total} incident${total===1?'':'s'} · ${review} need review`;
+    $('catalog-state').textContent=state.catalog.context.catalog_error|| (state.catalog.context.cached_at?`Last refreshed ${date(state.catalog.context.cached_at)}`:'Telemetry has not been refreshed.');
+    $('catalog-state').classList.toggle('warning-text',!!state.catalog.context.catalog_error);
+  }
+  function runList(target, runs) {
+    clear(target);
+    if(!runs.length){target.append(el('p','no-items','No investigations yet.'));return;}
+    for(const run of runs){
+      const row=el('article','run-list-row');
+      const name=el('div');name.append(link(`${run.incident_id} · ${run.candidate|| (run.state==='completed'?'Assessment':'Investigation')}`,'/investigations/'+run.id,'run-list-title'),el('p','row-meta',`${date(run.created_at)} · ${run.origin==='verification'?'Earlier verified run':run.origin==='imported'?'Imported snapshot':'Workspace run'}`));
+      const result=el('div','run-list-result');result.append(chip(statusName(run)),el('span','row-meta',run.state==='completed'?`${run.query_count} queries · ${run.evidence_count} evidence records`:run.stage));
+      row.append(name,result);target.append(row);
     }
   }
-
-  $('open-record-button').addEventListener('click', () => {
-    if (!state.busy) $('saved-record-input').click();
-  });
-  $('saved-record-input').addEventListener('change', async event => {
-    const file = event.target.files?.[0];
-    if (!file || state.busy) return;
-    state.busy = true;
-    $('open-record-button').disabled = true;
-    $('run-button').disabled = true;
-    $('incident-select').disabled = true;
-    $('model-select').disabled = true;
-    try {
-      if (file.size > 5 * 1024 * 1024) throw new Error('Saved records must be no larger than 5 MiB.');
-      let parsed;
-      try { parsed = JSON.parse(await file.text()); }
-      catch { throw new Error('The selected file is not valid JSON. Choose a completed IncidentCourt record.'); }
-      const report = validateSavedRecord(parsed);
-      state.report = report;
-      state.savedRecord = true;
-      state.filter = 'all';
-      $('error-banner').hidden = true;
-      $('empty-state').hidden = true;
-      $('loading-state').hidden = true;
-      renderIncidentSelect();
-      updateFilter();
-      renderReport();
-      $('report-workspace').hidden = false;
-      $('saved-record-note').scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } catch (error) {
-      showError(error, 'Saved record could not be opened', 'import');
-    } finally {
-      state.busy = false;
-      $('saved-record-input').value = '';
-      $('open-record-button').disabled = false;
-      updateRunAvailability();
-      $('incident-select').disabled = !state.incidents.length;
-      $('model-select').disabled = false;
-    }
-  });
-
-  $('investigation-form').addEventListener('submit', event => { event.preventDefault(); runInvestigation(); });
-  $('incident-select').addEventListener('change', () => { clearReport(); updateIncident(); });
-  $('model-select').addEventListener('change', () => {
-    state.modelChosen = true;
-    clearReport();
-    updateEngineNote();
-    updateRunAvailability();
-  });
-  $('retry-button').addEventListener('click', () => {
-    if (state.retryAction === 'import') { if (!state.busy) $('saved-record-input').click(); }
-    else if (state.loaded && state.incidents.length) runInvestigation();
-    else initialize();
-  });
-  for (const tab of document.querySelectorAll('[data-tab]')) {
-    tab.addEventListener('click', () => switchTab(tab.dataset.tab));
-    tab.addEventListener('keydown', event => {
-      const tabs = Array.from(document.querySelectorAll('[data-tab]'));
-      let index = tabs.indexOf(tab);
-      if (event.key === 'ArrowRight') index = (index + 1) % tabs.length;
-      else if (event.key === 'ArrowLeft') index = (index + tabs.length - 1) % tabs.length;
-      else if (event.key === 'Home') index = 0;
-      else if (event.key === 'End') index = tabs.length - 1;
-      else return;
-      event.preventDefault();
-      switchTab(tabs[index].dataset.tab, true);
-    });
+  function renderLibrary() {
+    const term=$('library-search').value.trim().toLowerCase(), filter=$('library-filter').value;
+    const runs=state.runs.filter(r=>[r.incident_id,r.candidate,r.run_id].join(' ').toLowerCase().includes(term)).filter(r=>filter==='All investigations'||filter==='Imported'&&r.origin==='imported'||filter==='Running'&&['running','queued'].includes(r.state)||filter==='Failed'&&['failed','interrupted'].includes(r.state)||filter===statusName(r));
+    runList($('library-list'),runs);
   }
-  for (const filter of document.querySelectorAll('[data-filter]')) filter.addEventListener('click', () => { state.filter = filter.dataset.filter; updateFilter(); renderEvidence(); });
-  $('export-button').addEventListener('click', () => {
-    if (!state.report) return;
-    const blob = new Blob([JSON.stringify(state.report, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `incidentcourt-${String(state.report.incident_id).replace(/[^a-z0-9_-]/gi, '_')}-${String(state.report.run_id || 'record').replace(/[^a-z0-9_-]/gi, '_')}.json`;
-    document.body.append(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  async function renderCase(id, token) {
+    $('case-new-run').disabled=true;
+    const data=await request('/api/cases/'+encodeURIComponent(id));if(token!==state.routeToken)return;
+    const c=data.case;state.caseId=c.id;
+    $('case-title').textContent=c.id+' · '+(incidentTitle(c)||'Incident');
+    const window=windowParts(c.start_ts,c.end_ts);$('case-subtitle').textContent=`${c.source||state.catalog.context.label} · ${window.day}${window.time?' · '+window.time:''}`;
+    $('case-new-run').disabled=!canStart()||!!state.catalog.active;
+    $('case-run-note').textContent=state.catalog.active?'One investigation is already running in this workspace.':canStart()?'A new run preserves all earlier results.':'New AI runs are paused. You can still read and review existing investigations.';
+    const overview=clear($('case-overview'));const strip=el('div','case-summary');strip.append(chip(c.status),el('span','muted',`${c.investigation_count} investigation${c.investigation_count===1?'':'s'}`));overview.append(strip);
+    if(c.completed){const box=el('section','latest-assessment');box.append(heading('Latest assessment',c.completed.candidate||'No service identified'),link('Open investigation →','/investigations/'+c.completed.id,'primary-link'));overview.append(box);}
+    else if(!data.investigations.length)overview.append(el('p','no-items','This case has not been investigated. Start a run when execution is available.'));
+    const metadata=el('details','case-metadata');metadata.append(el('summary','','Dataset details'),el('p','muted',`Source: ${c.source||'Not available'}. Split: ${splitLabel(c.split)}. These records come from controlled experiments.`));overview.append(metadata);
+    runList($('case-history'),data.investigations);
+  }
+  function showRun(run, initial) {
+    state.current=run;
+    $('run-origin').textContent=(run.origin==='imported'?'Imported snapshot · not linked to a case':run.origin==='verification'?'Earlier verified investigation':'Workspace investigation')+' · '+date(run.created_at);
+    const completed=run.state==='completed';
+    $('run-progress').hidden=!['queued','running'].includes(run.state);
+    $('run-failure').hidden=!['failed','interrupted'].includes(run.state);
+    $('report-workspace').hidden=!completed;$('review-panel').hidden=!completed;$('review-jump').hidden=!completed;
+    if(!completed){
+      $('execution-badge').textContent=statusName(run);
+      $('run-stage').textContent=run.stage;$('run-query-count').textContent=`${run.query_count} queries completed`;
+      $('failure-title').textContent=run.state==='interrupted'?'Investigation interrupted':'Investigation failed';
+      $('failure-message').textContent=run.error||'';$('failure-case-link').href='#/incidents/'+run.incident_id;
+    } else if(initial || !state.report || state.report.run_id!==run.report.run_id){
+      state.report=run.report;state.filter='all';updateFilter();renderReport();
+      $('review-note').disabled=false;$('reviewed').disabled=false;$('review-note').value=run.review.note;$('reviewed').checked=run.review.reviewed;state.reviewVersion=run.review.version;state.dirty=false;
+      $('review-feedback').textContent='';$('save-review').disabled=true;
+    }
+    $('review-state').replaceChildren();$('review-state').textContent=run.reviewed_at?'Reviewed':'Needs review';$('review-state').dataset.status=run.reviewed_at?'Reviewed':'Needs review';
+  }
+  async function renderInvestigation(id, token) {
+    const run=await request('/api/investigations/'+encodeURIComponent(id));if(token!==state.routeToken)return;
+    showRun(run,true);
+    clear($('breadcrumbs')).append(link('Incidents','/incidents'),el('span','breadcrumb-separator','/'),run.linked?link(run.incident_id,'/incidents/'+run.incident_id):el('span','',run.incident_id),el('span','breadcrumb-separator','/'),el('span','','Investigation'));
+  }
+  function renderSettings() {
+    const target=clear($('settings-content'));
+    for(const [name,value,detail] of [
+      ['Telemetry',state.catalog.context.label||'Not loaded',state.status?.data?.detail||'Source not configured.'],
+      ['Execution',state.status?.model?.requested_model ? modelLabel(state.status.model.requested_model):'Not configured',canStart()?'Execution is available for this workspace.':'New AI runs are paused. Saved results and review notes remain available.'],
+      ['Memory','H-MEM',state.status?.memory?.detail||'Memory status unavailable.']
+    ]){const section=el('section','setting-row');section.append(el('h2','',name));const body=el('div');body.append(el('h3','',value),el('p','muted',detail));if(name==='Execution'&&state.status?.model?.requested_model)body.append(el('code','setting-model',state.status.model.requested_model));section.append(body);target.append(section);}
+    const earlier=state.status?.last_verified;
+    if(earlier){const details=el('details','case-metadata');details.append(el('summary','','Earlier live verification'),el('p','muted',`${date(earlier.verified_at)} · ${earlier.gateway_calls} hosted calls · ${earlier.remote_selects} SELECTs. This is historical proof, not a current connection check.`));target.append(details);}
+  }
+  async function route() {
+    const requested=location.hash.slice(1)||'/incidents';
+    if(state.dirty && requested!==state.route && !window.confirm('Discard unsaved review changes?')){history.replaceState(null,'','#'+state.route);return;}
+    state.dirty=false;state.route=requested;state.current=null;state.report=null;const token=++state.routeToken;
+    $('error-banner').hidden=true;
+    for(const view of document.querySelectorAll('.workspace-view'))view.hidden=true;
+    $('page-loading').hidden=false;
+    const parts=requested.split('/').filter(Boolean);const section=parts[0]||'incidents';
+    for(const name of ['incidents','investigations','settings']){const active=name===section;$('nav-'+name).classList.toggle('active',active);if(active)$('nav-'+name).setAttribute('aria-current','page');else $('nav-'+name).removeAttribute('aria-current');}
+    $('execution-badge').textContent=state.catalog.context.label||'';
+    clear($('breadcrumbs')).append(el('span','',section==='settings'?'Settings':section==='investigations'?'Investigations':'Incidents'));
+    try{
+      if(section==='incidents'&&parts.length===1){$('view-incidents').hidden=false;renderQueue();}
+      else if(section==='incidents'&&/^IC-\d{3}$/.test(parts[1]||'')){await renderCase(parts[1],token);if(token!==state.routeToken)return;$('view-case').hidden=false;clear($('breadcrumbs')).append(link('Incidents','/incidents'),el('span','breadcrumb-separator','/'),el('span','',parts[1]));}
+      else if(section==='investigations'&&parts.length===1){await loadRuns();if(token!==state.routeToken)return;$('view-library').hidden=false;renderLibrary();}
+      else if(section==='investigations'&&/^[a-f0-9]{20}$/.test(parts[1]||'')){await renderInvestigation(parts[1],token);if(token!==state.routeToken)return;$('view-investigation').hidden=false;}
+      else if(section==='settings'&&parts.length===1){$('view-settings').hidden=false;renderSettings();}
+      else throw new Error('This workspace page does not exist. Use Incidents or Investigations to continue.');
+    }catch(error){if(token===state.routeToken)showError(error);}
+    finally{if(token===state.routeToken)$('page-loading').hidden=true;}
+  }
+  async function refreshCatalog() {
+    if(state.refreshBusy)return;state.refreshBusy=true;$('refresh-cases').disabled=true;$('refresh-cases').textContent='Refreshing…';
+    try{state.catalog=await post('/api/cases/refresh');state.incidents=state.catalog.cases;updateGlobals();if(state.report)updateRecordMetadata();if(state.route==='/incidents')renderQueue();}
+    catch(error){await loadCatalog().catch(()=>{});if(state.route==='/incidents')renderQueue();showError(error);}
+    finally{state.refreshBusy=false;$('refresh-cases').disabled=false;$('refresh-cases').textContent='Refresh telemetry';}
+  }
+  async function startRun() {
+    if(state.starting||!canStart())return;state.starting=true;$('case-new-run').disabled=true;
+    const incident=state.caseId;
+    if(!state.requestKeys.has(incident))state.requestKeys.set(incident,crypto.randomUUID());
+    try{
+      const run=await post('/api/investigations',{incident_id:incident,idempotency_key:state.requestKeys.get(incident)});
+      state.requestKeys.delete(incident);await loadCatalog();location.hash='/investigations/'+run.id;
+    }catch(error){if(error.details?.investigation_id){location.hash='/investigations/'+error.details.investigation_id;}else showError(error);}
+    finally{state.starting=false;$('case-new-run').disabled=!canStart()||!!state.catalog.active;}
+  }
+  async function saveReview() {
+    if(!state.current||!state.dirty)return;
+    const identity=state.current.id, token=state.routeToken;
+    $('save-review').disabled=true;$('review-note').disabled=true;$('reviewed').disabled=true;
+    try{
+      const review=await post('/api/investigations/'+identity+'/review',{note:$('review-note').value,reviewed:$('reviewed').checked,version:state.reviewVersion});
+      if(token===state.routeToken&&state.current?.id===identity){
+        state.current.review=review;state.current.reviewed_at=review.reviewed?'reviewed':null;state.reviewVersion=review.version;state.dirty=false;
+        $('review-state').textContent=review.reviewed?'Reviewed':'Needs review';$('review-state').dataset.status=$('review-state').textContent;$('review-feedback').textContent='Saved.';
+      }
+      await loadCatalog();
+    }catch(error){if(token===state.routeToken){showError(error);$('review-feedback').textContent='Not saved. Your text is still here.';}}
+    finally{if(token===state.routeToken&&state.current?.id===identity){$('review-note').disabled=false;$('reviewed').disabled=false;$('save-review').disabled=!state.dirty;}}
+  }
+  let polling=false;
+  async function poll() {
+    if(polling||document.hidden)return;polling=true;
+    try{
+      if(state.current&&['queued','running'].includes(state.current.state)){
+        const identity=state.current.id, token=state.routeToken;
+        const run=await request('/api/investigations/'+identity);
+        if(token===state.routeToken&&state.current?.id===identity)showRun(run,false);
+      }
+      if(state.catalog.active||state.current&&['queued','running'].includes(state.current.state)){
+        await loadCatalog();if(state.route==='/incidents')renderQueue();
+        else if(state.route==='/investigations'){await loadRuns();renderLibrary();}
+        else if(state.route.startsWith('/incidents/'))await renderCase(state.caseId,state.routeToken);
+      }
+    }catch(error){if(state.current&&['queued','running'].includes(state.current.state))$('run-query-count').textContent='Connection interrupted. Checking again; the run will not be restarted.';}
+    finally{polling=false;}
+  }
+  $('case-search').addEventListener('input',renderQueue);$('case-status').addEventListener('change',renderQueue);
+  $('library-search').addEventListener('input',renderLibrary);$('library-filter').addEventListener('change',renderLibrary);
+  $('refresh-cases').addEventListener('click',refreshCatalog);$('case-new-run').addEventListener('click',startRun);
+  $('dismiss-error').addEventListener('click',()=>{$('error-banner').hidden=true;});
+  $('import-button').addEventListener('click',()=>{$('saved-record-input').click();});
+  $('saved-record-input').addEventListener('change',async event=>{
+    const file=event.target.files?.[0];if(!file)return;$('import-button').disabled=true;
+    try{if(file.size>5*1024*1024)throw new Error('Import a JSON report no larger than 5 MiB.');let value;try{value=JSON.parse(await file.text());}catch{throw new Error('Choose a valid investigation JSON report.');}validateSavedRecord(value);const run=await post('/api/investigations/import',value);location.hash='/investigations/'+run.id;}
+    catch(error){showError(error);}finally{event.target.value='';$('import-button').disabled=false;}
   });
+  $('review-note').addEventListener('input',()=>{state.dirty=true;$('save-review').disabled=false;$('review-feedback').textContent='Unsaved changes';});
+  $('reviewed').addEventListener('change',()=>{state.dirty=true;$('save-review').disabled=false;$('review-feedback').textContent='Unsaved changes';});
+  $('save-review').addEventListener('click',saveReview);$('review-jump').addEventListener('click',()=>{$('review-panel').scrollIntoView({behavior:'smooth',block:'start'});$('review-note').focus({preventScroll:true});});
+  $('check-connections').addEventListener('click',async()=>{
+    $('check-connections').disabled=true;$('check-connections').textContent='Checking…';
+    try{const result=await post('/api/connections/check');const target=clear($('connection-results'));target.hidden=false;target.append(el('h2','','Connection check'),el('p','',`Telemetry: ${result.data.state}. Nightshift: ${result.model.state}${result.model.model_advertised===false?' (configured model not advertised)':''}.`),el('p','muted',`Checked ${date(result.checked_at)}. No inference was sent.`));}
+    catch(error){showError(error);}finally{$('check-connections').disabled=false;$('check-connections').textContent='Check connections';}
+  });
+  for(const tab of document.querySelectorAll('[data-tab]')){
+    tab.addEventListener('click',()=>switchTab(tab.dataset.tab));
+    tab.addEventListener('keydown',event=>{const tabs=[...document.querySelectorAll('[data-tab]')];let i=tabs.indexOf(tab);if(event.key==='ArrowRight')i=(i+1)%tabs.length;else if(event.key==='ArrowLeft')i=(i+tabs.length-1)%tabs.length;else if(event.key==='Home')i=0;else if(event.key==='End')i=tabs.length-1;else return;event.preventDefault();switchTab(tabs[i].dataset.tab,true);});
+  }
+  for(const filter of document.querySelectorAll('[data-filter]'))filter.addEventListener('click',()=>{state.filter=filter.dataset.filter;updateFilter();renderEvidence();});
+  $('export-button').addEventListener('click',()=>{if(!state.report)return;const url=URL.createObjectURL(new Blob([JSON.stringify(state.report,null,2)],{type:'application/json'}));const a=el('a');a.href=url;a.download=`incidentcourt-${state.report.incident_id}-${state.report.run_id}.json`;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);});
+  window.addEventListener('hashchange',route);window.addEventListener('beforeunload',event=>{if(state.dirty){event.preventDefault();event.returnValue='';}});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)poll();});setInterval(poll,2000);
+  async function initialize(){
+    const [settings,catalog]=await Promise.allSettled([request('/api/status'),loadCatalog()]);
+    if(settings.status==='fulfilled')state.status=settings.value;
+    if(catalog.status==='rejected')showError(catalog.reason);
+    updateGlobals();await route();
+    if(!state.catalog.context.cached_at)refreshCatalog();
+  }
   initialize();
 })();

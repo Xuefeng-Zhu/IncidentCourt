@@ -1,6 +1,6 @@
 # IncidentCourt
 
-An incident investigation desk for **Open Agent Hackathon Track 02 — The Agent That Can Explain Why**. It compares metrics, logs and distributed traces, challenges a leading service hypothesis, and returns a timeline with supporting evidence, counterevidence, alternatives and uncertainty.
+A personal workspace for investigating incidents and reviewing evidence, built for **Open Agent Hackathon Track 02 — The Agent That Can Explain Why**. It compares metrics, logs and distributed traces, challenges a leading service hypothesis, and returns a timeline with supporting evidence, counterevidence, alternatives and uncertainty.
 
 **The complete command-line live flow passed on October 25, 2026:** real Zetaris SQL → Nightshift → hosted NVIDIA Nemotron 3.5 Lightning, with official Meterless H-MEM consumption. Two actual investigations passed all 11 verification layers. The run used 45 remote SELECTs and six distinct uncached hosted responses; historical recall caused two extra current-incident queries without storing the holdout. This establishes the tested behavior and provenance on sampled RCAEval telemetry. The saved live record was also verified in the browser through citation rows, query trail and matching JSON export; browser-triggered generation was not repeated. Accuracy, production readiness and deployment are not established.
 
@@ -13,7 +13,7 @@ cd /Users/frank/mygit/IncidentCourt
 python3.12 run.py --sample
 ```
 
-Open <http://127.0.0.1:8317>. Choose an incident and run an investigation. Evidence references open their source rows; Query trail shows executed SQL and critic decisions. Export record saves the computed report as JSON.
+Open <http://127.0.0.1:8317>. The incident queue leads to case pages and investigation history. In offline sample mode, choose **New investigation** to run deterministic rules on real sample telemetry. You can leave and reopen the run while it executes. Evidence references open their source rows; Query trail shows executed SQL and critic decisions. Export JSON preserves the original computed report.
 
 The prepared `.venv/bin/python` is Python 3.12.13 with working SQLite. To create an environment with uv:
 
@@ -32,6 +32,21 @@ curl -s http://127.0.0.1:8317/run \
 ```
 
 `SAMPLE_MODE=true` also selects offline mode. A small SQLite file is restored from the committed fixture without network access. It never calls Zetaris or Nightshift. Sample, full local and live modes have distinct receipts and separate sample memory stores.
+
+## Persistent workspace
+
+- **Incidents:** search and filter the current source's case queue by investigation/review status. Cached case metadata remains available when telemetry cannot be refreshed.
+- **Investigations:** reopen completed, failed, and interrupted work using stable URLs. One background run executes at a time, sharing the legacy API's lock; idempotency keys prevent duplicate dispatch. Actual stages and query counts persist. Unfinished runs become Interrupted on server restart and are never automatically resubmitted.
+- **Review:** save private notes and mark individual runs reviewed. Notes survive reloads and restarts, never modify generated reports, and never enter telemetry SQL, model prompts, or H-MEM. Concurrent stale review saves return a conflict rather than overwriting newer notes.
+- **Settings:** inspect the source/model and perform explicit metadata-only connection checks. The main workflow has no model selector or credential form.
+
+Private data is stored in ignored `data/workspace.sqlite3` (including its SQLite sidecars). Run one application-server process per workspace database. The source identity excludes credentials and partitions sample, local, and Zetaris history. Stop the server before copying the database for a simple filesystem backup.
+
+The initial live workspace bootstraps only the two explicitly configured, hash-verified historical reports, both initially unreviewed. It does not scan private directories or index unrelated legacy test outputs. Manually imported JSON snapshots persist in the library, remain visibly unverified/unlinked, and cannot change case-queue status. Original reports remain immutable and exports retain their existing JSON format.
+
+New case/history APIs are `/api/cases`, `/api/cases/{id}`, `/api/investigations`, and `/api/investigations/{id}`. POST starts an investigation with `incident_id` and `idempotency_key`; `/api/investigations/{id}/review` saves `note`, `reviewed`, and the current `version`. `/api/investigations/import` accepts a complete report up to 5 MiB. `/api/cases/refresh` and `/api/connections/check` refresh metadata without inference. Existing CLI and synchronous `/run` and `/api/investigate` contracts remain available.
+
+The background UI was exercised end to end using isolated offline sample SQL/rules, including navigation/reload during a gated QA run and eventual completion. This does not constitute a new hosted-provider verification. The existing hosted allowance remains exhausted and inference stays disabled.
 
 ## Investigation behavior
 

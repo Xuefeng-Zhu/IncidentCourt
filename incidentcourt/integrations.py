@@ -257,6 +257,18 @@ class NightshiftClient:
             return {"state": "unauthorized" if str(exc) == "Nightshift unauthorized" else "offline",
                     "models": [], "reason": str(exc), "live_inference_verified": False}
 
+    def assert_bounded_execution(self) -> None:
+        """Fail closed until the runtime can enforce the approved request bound.
+
+        The staged runtime can merge globally enabled MCP tools into a request
+        and may run a cross-check verifier. Its public API exposes no atomic,
+        per-request guarantee disabling both behaviors or bounding all upstream
+        attempts. User-set environment flags and post-call receipts cannot close
+        that gap. A future implementation may return only when its transport
+        actually enforces those controls on the same request being dispatched.
+        """
+        raise IntegrationError('Nightshift cannot enforce the requested upstream-attempt bound for this browser run.')
+
     @staticmethod
     def _response_proof(response: dict) -> dict:
         """Allowlisted model output and routing evidence, never runtime config."""

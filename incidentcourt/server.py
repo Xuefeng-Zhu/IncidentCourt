@@ -128,21 +128,36 @@ def status():
     sample = os.environ.get('SAMPLE_MODE', '').lower() in ('1', 'true')
     mode = 'sample' if sample else os.environ.get('INCIDENTCOURT_DATA_MODE', 'local')
     db = ROOT / ('data/sample.sqlite3' if sample else 'data/telemetry.sqlite3')
-    model = NightshiftClient.from_env().status()
+    client = NightshiftClient.from_env()
+    model = client.status()
     memory = HMemStore(ROOT / ('data/memory-sample' if sample else 'data/memory')).status()
     configured = model.get('state') == 'configured_unverified'
-    enabled = bool(not sample and configured and model.get('inference_enabled'))
+    enabled = bool(not sample and mode == 'zetaris' and configured and model.get('inference_enabled'))
+    approved_incident = None
+    if enabled:
+        try:
+            from .hosted_guard import HostedRunPolicy
+            policy = HostedRunPolicy.from_env(client)
+            enabled = workspace_service()[0].allowance_available(policy)
+            approved_incident = policy.incident_id if enabled else None
+        except (IntegrationError, ValueError, OSError):
+            enabled = False
     hosted = model.get('hosted_only') is True
     if configured:
         model_detail = ('Hosted Nightshift model configured' if hosted else 'Nightshift configured')
-        model_detail += '; new inference authorization is off. Open a saved record to review earlier execution.' if not enabled else '; authorized inference is enabled. Current provider connectivity is not checked by this status view.'
+        if enabled:
+            model_detail += '; authorized inference is enabled. Current provider connectivity is not checked by this status view.'
+        elif model.get('inference_enabled'):
+            model_detail += '; the one-run allowance is unavailable or the runtime cannot enforce its limits. Saved records remain available.'
+        else:
+            model_detail += '; new inference authorization is off. Open a saved record to review earlier execution.'
     else:
         model_detail = 'Nightshift runtime authentication is not configured; generation is unavailable.'
     return {'data': {'mode': mode if mode in ('zetaris', 'sample') or db.exists() else 'not_imported',
                      'detail': ('Curated real RCAEval subset; offline sample execution.' if sample else 'Local RCAEval telemetry; Zetaris path not verified.') if mode != 'zetaris' else 'Zetaris selected. Current connectivity is not checked by this status view.'},
             'model': {'mode': 'configured' if configured else 'not_configured', 'detail': model_detail,
                       'inference_enabled': enabled, 'hosted_only': hosted,
-                      'requested_model': model.get('requested_model')},
+                      'requested_model': model.get('requested_model'), 'approved_incident': approved_incident},
             'memory': {'mode': 'official-hmem-reference' if memory.get('state') == 'working' else 'unavailable',
                        'detail': 'Official Meterless H-MEM reference; historical context rechecked against current telemetry.',
                        'reference': memory},
@@ -251,7 +266,11 @@ class Handler(BaseHTTPRequestHandler):
                         raise WorkspaceError('New AI investigations are paused for this workspace. Existing reports and reviews remain available.', 403)
                 identity = manager.start(payload.get('incident_id'), key, model)
                 return self.reply(workspace.investigation(identity), 202)
-            # Existing synchronous API remains compatible and shares the same lock.
+            # Hosted execution must use the guarded background path. The legacy
+            # synchronous endpoint has no one-run authorization or receipt budget.
+            if payload.get('model', 'local') == 'nightshift':
+                return self.reply({'error': 'Hosted investigations must use the guarded workspace flow.'}, 403)
+            # Existing offline synchronous API remains compatible and shares the same lock.
             if not RUN_LOCK.acquire(blocking=False):
                 return self.reply({'error': 'An investigation is already running.'}, 409)
             try:

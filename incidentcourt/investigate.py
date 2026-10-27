@@ -17,7 +17,7 @@ def safe_number(value):
     return isinstance(value, (int, float)) and math.isfinite(value)
 
 
-def investigate(incident_id, model='local', store=None, memory=None, progress=None):
+def investigate(incident_id, model='local', store=None, memory=None, progress=None, client=None):
     if model not in ('local', 'nightshift'):
         raise DataError('Choose local or nightshift model mode.')
     store = store or Store()
@@ -33,7 +33,7 @@ def investigate(incident_id, model='local', store=None, memory=None, progress=No
     b_end = start + (end - start) / 3
     c_start = start + 2 * (end - start) / 3
     steps, evidence, timeline, limitations = [], [], [], []
-    client = NightshiftClient.from_env() if model=='nightshift' else None
+    client = (client or NightshiftClient.from_env()) if model=='nightshift' else None
     provider_calls = []
 
     stage = 'Reading incident'

@@ -1,37 +1,54 @@
 # IncidentCourt
 
-A personal workspace for investigating incidents and reviewing evidence, built for **Open Agent Hackathon Track 02 — The Agent That Can Explain Why**. It compares metrics, logs and distributed traces, challenges a leading service hypothesis, and returns a timeline with supporting evidence, counterevidence, alternatives and uncertainty.
+IncidentCourt is a local workspace for investigating incidents across metrics, logs and distributed traces. It builds and challenges service hypotheses, then presents a timeline, supporting evidence, counterevidence, alternatives and uncertainty. It was built for **Open Agent Hackathon Track 02 — The Agent That Can Explain Why**.
 
-**The complete command-line live flow passed on October 25, 2026:** real Zetaris SQL → Nightshift → hosted NVIDIA Nemotron 3.5 Lightning, with official Meterless H-MEM consumption. Two actual investigations passed all 11 verification layers. The run used 45 remote SELECTs and six distinct uncached hosted responses; historical recall caused two extra current-incident queries without storing the holdout. This establishes the tested behavior and provenance on sampled RCAEval telemetry. The saved live record was also verified in the browser through citation rows, query trail and matching JSON export; browser-triggered generation was not repeated. Accuracy, production readiness and deployment are not established.
+The bundled sample runs offline with deterministic rules and real, sampled [RCAEval](https://huggingface.co/datasets/phamquiluan/RCAEval) telemetry. An optional live path connects Zetaris, Meterless H-MEM and Nightshift. On October 25, 2026, two command-line investigations passed the documented live verification checks with hosted NVIDIA Nemotron; a saved live report's citations, query trail and JSON export were also checked in the browser. Browser-triggered hosted generation, diagnostic accuracy, production readiness and deployment were not established. See [live verification](docs/LIVE_VERIFICATION.md) for the evidence and limits.
 
 ## Run the offline sample
 
-Requires **Python 3.12+** with SQLite and **Node.js 24+**. No pip or npm packages are needed for application sample execution. The bundled 736,817-byte fixture contains actual measured telemetry, not generated incidents or replayed reports.
+Requires **Python 3.12+** with SQLite and **Node.js 24+**. No pip or npm installation, credentials or network access are needed to run the sample. The bundled fixture contains measured telemetry from controlled experiments; it is not a set of generated incidents or replayed reports.
 
 ```sh
-cd /Users/frank/mygit/IncidentCourt
+git clone https://github.com/Xuefeng-Zhu/IncidentCourt.git
+cd IncidentCourt
 python3.12 run.py --sample
 ```
 
-Open <http://127.0.0.1:8317>. The incident queue leads to case pages and investigation history. In offline sample mode, choose **New investigation** to run deterministic rules on real sample telemetry. You can leave and reopen the run while it executes. Evidence references open their source rows; Query trail shows executed SQL and critic decisions. Export JSON preserves the original computed report.
+Open <http://127.0.0.1:8317>, select an incident and choose **New investigation**. You can leave and reopen the run while it executes. Evidence references open their source rows, **Query trail** shows executed SQL and critic decisions, and **Visuals** explores saved observations. Export JSON preserves the original computed report. Stop the server with `Ctrl+C`.
 
-The prepared `.venv/bin/python` is Python 3.12.13 with working SQLite. To create an environment with uv:
+If Python 3.12 is not the default, one option is to create an environment with [uv](https://docs.astral.sh/uv/):
 
 ```sh
 uv venv --python 3.12 .venv
 .venv/bin/python run.py --sample
 ```
 
-The CLI accepts JSON and prints a report to stdout; execution summaries go to stderr and `logs/`:
+To run an investigation directly from a JSON input, use the CLI. The report goes to stdout; execution summaries go to stderr and `logs/`:
 
 ```sh
-.venv/bin/python run.py --sample --input input_examples/example_1.json
+python3.12 run.py --sample --input input_examples/example_1.json > report.json
+```
+
+With the sample server running, the synchronous HTTP endpoint accepts the same input:
+
+```sh
 curl -s http://127.0.0.1:8317/run \
   -H 'Content-Type: application/json' \
   -d '{"incident_id":"IC-001","model":"local"}'
 ```
 
 `SAMPLE_MODE=true` also selects offline mode. A small SQLite file is restored from the committed fixture without network access. It never calls Zetaris or Nightshift. Sample, full local and live modes have distinct receipts and separate sample memory stores.
+
+## Documentation
+
+| Guide | Contents |
+| --- | --- |
+| [Data and provenance](docs/DATA.md) | RCAEval source, sampling, normalization and leakage boundaries |
+| [Integrations](docs/INTEGRATIONS.md) | H-MEM and Nightshift configuration and verification |
+| [Zetaris data path](docs/ZETARIS.md) | Table preparation, registration and connection details |
+| [Live verification](docs/LIVE_VERIFICATION.md) | Dated execution evidence and its limits |
+| [Implementation overview](docs/IMPLEMENTATION.md) | Components, execution flow and workspace APIs |
+| [Handoff](docs/HANDOFF.md) | Project status and development context |
 
 ## Persistent workspace
 
@@ -45,9 +62,9 @@ Visuals read the report's saved rows without requesting telemetry or inference. 
 
 Private data is stored in ignored `data/workspace.sqlite3` (including its SQLite sidecars). Run one application-server process per workspace database. The source identity excludes credentials and partitions sample, local, and Zetaris history. Stop the server before copying the database for a simple filesystem backup.
 
-The initial live workspace bootstraps only the two explicitly configured, hash-verified historical reports, both initially unreviewed. It does not scan private directories or index unrelated legacy test outputs. Manually imported JSON snapshots persist in the library, remain visibly unverified/unlinked, and cannot change case-queue status. Original reports remain immutable and exports retain their existing JSON format.
+When a valid private verification receipt and its reports are explicitly configured, the live workspace can bootstrap those two hash-verified historical reports as unreviewed history. Those private files are not included in a public clone. The workspace does not scan private directories or index unrelated legacy test outputs. Manually imported JSON snapshots persist in the library, remain visibly unverified/unlinked, and cannot change case-queue status. Original reports remain immutable and exports retain their existing JSON format.
 
-New case/history APIs are `/api/cases`, `/api/cases/{id}`, `/api/investigations`, and `/api/investigations/{id}`. POST starts an investigation with `incident_id` and `idempotency_key`; `/api/investigations/{id}/review` saves `note`, `reviewed`, and the current `version`. `/api/investigations/import` accepts a complete report up to 5 MiB. `/api/cases/refresh` and `/api/connections/check` refresh metadata without inference. Existing CLI and synchronous `/run` and `/api/investigate` contracts remain available.
+New case/history APIs are `/api/cases`, `/api/cases/{id}`, `/api/investigations`, and `/api/investigations/{id}`. POST starts an investigation with `incident_id` and `idempotency_key`; `/api/investigations/{id}/review` saves `note`, `reviewed`, and the current `version`. `/api/investigations/import` accepts a complete report up to 5 MiB. `/api/cases/refresh` and `/api/connections/check` refresh metadata without inference. The CLI and synchronous endpoints remain available for offline execution; hosted browser runs use the guarded workspace endpoint.
 
 The background UI was exercised end to end using isolated offline sample SQL/rules, including navigation/reload during a gated QA run and eventual completion. This does not constitute a new hosted-provider verification. The existing hosted allowance remains exhausted and inference stays disabled.
 
@@ -68,7 +85,7 @@ The committed sample contains 28,126 metrics, 1,498 logs and 15,000 spans, sampl
 
 Nulls remain missing. Trace times are normalized to epoch seconds and durations to milliseconds. Missing severity/status is not converted into an error. IC-001 traces end about 170 seconds before its metrics. Correlation or missing spans do not prove a cause or recovery. No deployment history or support tickets were supplied or synthesized.
 
-To regenerate the larger local subset:
+To regenerate the larger local subset, first create `.venv` as shown above if you do not already have a Python 3.12 environment. The following commands install optional data dependencies and download the bounded source subset:
 
 ```sh
 uv pip install --python .venv/bin/python -r requirements-data.txt
@@ -87,17 +104,17 @@ See [data provenance](docs/DATA.md) and the manifests under `data/public/`.
 | Nightshift | Six distinct uncached planner/critic/explanation responses across two real investigations | Saved live record browser citation/query/export checks passed; new generation disabled after the approved budget |
 | NVIDIA | Every response named the exact approved `nvidia/nemotron-3.5-lightning-30b-a3b` route through Nightshift | Runtime cost reports do not independently prove account billing |
 
-Copy `.env.example` to ignored `.env.local` using existing settings. `.venv/bin/python -m scripts.check_integrations` performs read-only discovery and SELECT checks; no inference or resources are created. See [Zetaris data path](docs/ZETARIS.md) and [Meterless/Nightshift details](docs/INTEGRATIONS.md).
+For optional integrations, copy `.env.example` to the ignored `.env.local` and supply existing connection settings. Environment variables take precedence over `.env.local` values. Run `python3.12 -m scripts.check_integrations` for read-only discovery and SELECT checks; it does not send inference requests or create resources. See [Zetaris data path](docs/ZETARIS.md) and [Meterless/Nightshift details](docs/INTEGRATIONS.md).
 
-The approved six gateway generation calls have been consumed. Persistent `NIGHTSHIFT_ALLOW_INFERENCE=0` disables further generation until new usage is explicitly authorized. The completed run reported zero actual cost for each response and 890 output tokens in total; these are runtime reports, not an invoice. Nightshift's approved worst-case bound was 18 upstream attempts; individual internal retries are not exposed.
+The earlier six-call allowance was consumed. Those responses reported zero estimated cost and 890 output tokens in total; the runtime figures are not an invoice. The receipts do not establish the number or route of every internal model call, including any cross-check or tool loop.
 
-For a separately authorized live run, set `SAMPLE_MODE=false`, `INCIDENTCOURT_DATA_MODE=zetaris`, existing Zetaris settings, and Nightshift settings. The current project policy is hosted NVIDIA Nemotron through Nightshift, using an exact advertised `nvidia/...` model ID and `NIGHTSHIFT_HOSTED_ONLY=1`; automatic/local substitutions are rejected. `NIGHTSHIFT_ALLOW_INFERENCE=1` explicitly enables authorized usage of the runtime's providers. `METERLESS_BASE_URL`, `METERLESS_RUNTIME_TOKEN` and `METERLESS_MODEL` are supported aliases. Nightshift is the only integrated LLM provider. An NVIDIA key belongs in Nightshift, not this app.
+The browser's one-run guard requires a specific incident, exact hosted route and single-use nonce, and checks receipts after each of at most three gateway calls. It also requires an adapter that can enforce the upstream-attempt limit and exclude internal local-model calls. The staged Nightshift version cannot establish those controls, so hosted browser generation remains paused even if `NIGHTSHIFT_ALLOW_INFERENCE=1`. Runtime cost estimates cannot guarantee free-credit-only billing; confirm that separately before any future dispatch. See [live verification](docs/LIVE_VERIFICATION.md) for the current limitation. An NVIDIA key belongs in Nightshift, not this app.
 
 ## Verification
 
 ```sh
-.venv/bin/python -m unittest discover -s tests -v
-.venv/bin/python -m scripts.verify_memory_flow
+python3.12 -m unittest discover -s tests -v
+python3.12 -m scripts.verify_memory_flow
 npm ci --prefix vendor/meterless-hmem --ignore-scripts
 npm test --prefix vendor/meterless-hmem
 ```
@@ -117,6 +134,6 @@ docker run --rm -p 127.0.0.1:8317:8317 incidentcourt
 
 The container defaults to sample mode. Remote adapters require HTTPS. This is a local investigation tool with loopback Host checks, no general SQL API and no remediation actions.
 
-## Event and remaining delivery work
+## Event context
 
-The [organizer event page](https://hackathon.genai.works/event/open-agent-hackathon-2026) and signed-in [resources](https://hackathon.genai.works/resources) were rechecked October 25, 2026. Submissions close **October 27 at 23:45 UTC (4:45 p.m. Pacific)**. Zetaris, a working Meterless Engine feature and Nightshift as primary AI provider are required; Cursor is optional. Public source/README, a 1–4 minute real-running demo, slides and sponsor-use explanation remain delivery work. Nothing has been published or submitted.
+The [organizer event page](https://hackathon.genai.works/event/open-agent-hackathon-2026) and signed-in [resources](https://hackathon.genai.works/resources) were checked October 25, 2026. At that time the listed submission deadline was **October 27 at 23:45 UTC (4:45 p.m. Pacific)**, and the requirements included Zetaris, a working Meterless Engine feature, Nightshift as primary AI provider, a 1–4 minute real-running demo, slides and an explanation of sponsor use. Consult the organizer for current requirements and submission status.

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="theme-color" content="#f4f5f7"><title>IncidentCourt — Workspace</title><link rel="stylesheet" href="/static/styles.css"><script src="/static/app.js" defer></script></head>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><meta name="theme-color" content="#f4f5f7"><title>IncidentCourt — Workspace</title><link rel="stylesheet" href="/static/styles.css"><link rel="stylesheet" href="/static/visuals.css"><script src="/static/visual-data.js" defer></script><script src="/static/visuals.js" defer></script><script src="/static/app.js" defer></script></head>
 <body><a class="skip-link" href="#main-content">Skip to workspace</a><div class="workspace">
 <aside class="sidebar" aria-label="Workspace navigation">
 <a class="brand" href="#/incidents"><span class="brand-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M6 3h8l4 4v14H6V3Zm8 0v5h4M9 12h6M9 16h6"/></svg></span><span>IncidentCourt</span></a>
@@ -33,10 +33,12 @@
           <div class="record-statbar" id="record-statbar"></div>
           <div class="tabs" role="tablist" aria-label="Investigation views">
             <button class="tab active" id="tab-report" type="button" role="tab" aria-selected="true" aria-controls="panel-report" data-tab="report">Report</button>
+            <button class="tab" id="tab-visuals" type="button" role="tab" aria-selected="false" aria-controls="panel-visuals" tabindex="-1" data-tab="visuals">Visuals</button>
             <button class="tab" id="tab-evidence" type="button" role="tab" aria-selected="false" aria-controls="panel-evidence" tabindex="-1" data-tab="evidence">Evidence <span id="evidence-count">0</span></button>
             <button class="tab" id="tab-trail" type="button" role="tab" aria-selected="false" aria-controls="panel-trail" tabindex="-1" data-tab="trail">Query trail <span id="query-count">0</span></button>
           </div>
           <div id="panel-report" class="tab-panel" role="tabpanel" aria-labelledby="tab-report"></div>
+          <div id="panel-visuals" class="tab-panel" role="tabpanel" aria-labelledby="tab-visuals" hidden><div id="visual-evidence"></div></div>
           <div id="panel-evidence" class="tab-panel" role="tabpanel" aria-labelledby="tab-evidence" hidden>
             <div class="panel-heading"><h3>Evidence</h3><div class="filter-group" role="group" aria-label="Filter evidence"><button type="button" class="filter active" data-filter="all" aria-pressed="true">All</button><button type="button" class="filter" data-filter="metrics" aria-pressed="false">Metrics</button><button type="button" class="filter" data-filter="logs" aria-pressed="false">Logs</button><button type="button" class="filter" data-filter="traces" aria-pressed="false">Traces</button></div></div>
             <div id="evidence-list"></div>

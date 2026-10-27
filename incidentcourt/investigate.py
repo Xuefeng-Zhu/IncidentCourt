@@ -25,6 +25,9 @@ def investigate(incident_id, model='local', store=None, memory=None, progress=No
         raise DataError('Offline sample mode runs local heuristics; disable SAMPLE_MODE for Nightshift.')
     memory = memory or HMemStore(ROOT / ('data/memory-sample' if store.mode=='sample' else 'data/memory'))
     incident = store.incident(incident_id)
+    # Preserve the receipt actually used to read these bounds; callers may have
+    # already queried this Store, so the incident query is not always Q01.
+    window_query_id = store.queries[-1]['id']
     iid = literal(incident_id)
     start, end = float(incident['start_ts']), float(incident['end_ts'])
     b_end = start + (end - start) / 3
@@ -299,6 +302,9 @@ ORDER BY ts LIMIT 1''')
                   model={'mode':'local','detail':'Deterministic investigator/critic heuristics; no LLM call.'},
                   memory={'mode':'official-hmem-reference','detail':'Retrieved earlier verified observations and rechecked suggested services.', 'matches':memories,'trace':retrieved.get('trace')},
                   created_at=datetime.now(timezone.utc).isoformat(),initial_service=initial,
+                  analysis_window={'start_ts':start, 'end_ts':end,
+                                   'baseline_end_ts':b_end, 'comparison_start_ts':c_start,
+                                   'query_id':window_query_id},
                   coverage=coverage,
                   supporting_evidence_ids=support,
                   counterevidence_ids=[e['id'] for e in evidence if e['kind']=='counterevidence'],

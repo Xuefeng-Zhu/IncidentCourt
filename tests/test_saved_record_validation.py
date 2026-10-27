@@ -89,6 +89,22 @@ class SavedRecordValidationTests(unittest.TestCase):
         value['summary'] = 'x' * 12001
         self.assertFalse(self.validate(value)['ok'])
 
+    def test_recorded_visual_windows_are_optional_ordered_and_query_linked(self):
+        value = fixture_report()
+        original = deepcopy(value)
+        self.assertTrue(self.validate(value)['ok'])
+        self.assertEqual(value, original)
+        window = {'start_ts': 0, 'baseline_end_ts': 30, 'comparison_start_ts': 60,
+                  'end_ts': 90, 'query_id': 'Q01'}
+        value['analysis_window'] = window
+        self.assertTrue(self.validate(value)['ok'])
+        for invalid in [None, {}, {**window, 'start_ts': True},
+                        {**window, 'baseline_end_ts': 70},
+                        {**window, 'end_ts': '90'}, {**window, 'query_id': 'Q99'}]:
+            value['analysis_window'] = invalid
+            with self.subTest(window=invalid):
+                self.assertFalse(self.validate(value)['ok'])
+
 
 class SavedRecordSelectionRaceTests(unittest.TestCase):
     def test_late_archive_response_cannot_replace_an_imported_record_selection(self):

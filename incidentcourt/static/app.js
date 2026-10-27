@@ -24,6 +24,13 @@ function validateSavedRecord(value) {
     if (!object(query) || !id(query.id) || queryIds.has(query.id) || query.backend !== dataMode || !string(query.purpose, 2000) || !string(query.sql, 20000) || !/^\s*SELECT\s/i.test(query.sql) || !Number.isInteger(query.row_count) || query.row_count < 0 || query.row_count > 1000) fail('The saved record has an invalid or inconsistent executed-query receipt.');
     queryIds.add(query.id);
   }
+  if (value.analysis_window !== undefined) {
+    const window = value.analysis_window;
+    const fields = ['start_ts', 'baseline_end_ts', 'comparison_start_ts', 'end_ts'];
+    if (!object(window) || !fields.every(key => typeof window[key] === 'number' && Number.isFinite(window[key])) ||
+        !(window.start_ts < window.baseline_end_ts && window.baseline_end_ts <= window.comparison_start_ts && window.comparison_start_ts < window.end_ts) ||
+        !queryIds.has(window.query_id)) fail('The saved record has invalid comparison windows or an unresolved window query.');
+  }
   const evidenceIds = new Set();
   for (const evidence of value.evidence) {
     if (!object(evidence) || !id(evidence.id) || evidenceIds.has(evidence.id) || !queryIds.has(evidence.query_id) || !['metrics', 'logs', 'traces', 'counterevidence'].includes(evidence.kind) || !string(evidence.service, 200) || !string(evidence.summary) || !array(evidence.rows, 1000)) fail('The saved record has invalid evidence or an unresolved source query.');
@@ -70,7 +77,7 @@ if (typeof module === 'object' && module.exports) module.exports = { validateSav
 
 if (typeof document !== 'undefined') (() => {
   const $ = id => document.getElementById(id);
-  const state = { incidents: [], catalog: {cases:[],context:{}}, runs: [], status: null, report: null, current: null, filter: 'all', route: '', routeToken: 0, dirty: false, reviewVersion: 0, refreshBusy: false, starting: false, requestKeys: new Map() };
+  const state = { incidents: [], catalog: {cases:[],context:{}}, runs: [], status: null, report: null, current: null, filter: 'all', activeTab: 'report', visualService: '', visualRange: 'full', route: '', routeToken: 0, dirty: false, reviewVersion: 0, refreshBusy: false, starting: false, requestKeys: new Map() };
   const el = (tag, className, text) => {
     const node = document.createElement(tag);
     if (className) node.className = className;
@@ -105,7 +112,22 @@ if (typeof document !== 'undefined') (() => {
   const confidence = value => text(value);
   const normalizeKind = kind => ({ metric: 'metrics', log: 'logs', trace: 'traces' }[String(kind).toLowerCase()] || String(kind).toLowerCase());
 
-  function switchTab(tab, focus = false) {
+  function saveVisualLocation() {
+    if (!state.current || state.current.state !== 'completed') return;
+    const params = new URLSearchParams();
+    if (state.activeTab !== 'report') params.set('view', state.activeTab);
+    if (state.visualService) params.set('service', state.visualService);
+    if (state.visualRange !== 'full') params.set('range', state.visualRange);
+    const route = '/investigations/' + state.current.id + (params.size ? '?' + params : '');
+    history.replaceState(null, '', '#' + route);
+    state.route = route;
+  }
+
+  function switchTab(tab, focus = false, persist = true) {
+    if (!['report', 'visuals', 'evidence', 'trail'].includes(tab)) tab = 'report';
+    state.activeTab = tab;
+    $('view-investigation').classList.toggle('is-visual-view', tab === 'visuals');
+    $('review-jump').hidden = tab === 'visuals' || state.current?.state !== 'completed';
     for (const button of document.querySelectorAll('[data-tab]')) {
       const active = button.dataset.tab === tab;
       button.classList.toggle('active', active);
@@ -113,6 +135,32 @@ if (typeof document !== 'undefined') (() => {
       button.tabIndex = active ? 0 : -1;
       $(`panel-${button.dataset.tab}`).hidden = !active;
       if (active && focus) button.focus();
+    }
+    if (persist) saveVisualLocation();
+  }
+
+  function inspectEvidence(id) {
+    state.filter = 'all';
+    updateFilter();
+    renderEvidence();
+    switchTab('evidence');
+    const card = document.getElementById(`evidence-${id}`);
+    if (card) {
+      card.classList.add('highlight');
+      card.tabIndex = -1;
+      card.focus({ preventScroll: true });
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function inspectQuery(id) {
+    switchTab('trail');
+    const card = document.getElementById(`query-${id}`);
+    if (card) {
+      card.querySelector('details').open = true;
+      card.tabIndex = -1;
+      card.focus({ preventScroll: true });
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
   }
 
@@ -122,19 +170,7 @@ if (typeof document !== 'undefined') (() => {
       const button = el('button', 'evidence-ref', id);
       button.type = 'button';
       button.setAttribute('aria-label', `Inspect evidence ${id}`);
-      button.addEventListener('click', () => {
-        state.filter = 'all';
-        updateFilter();
-        renderEvidence();
-        switchTab('evidence');
-        const card = document.getElementById(`evidence-${id}`);
-        if (card) {
-          card.classList.add('highlight');
-          card.tabIndex = -1;
-          card.focus({ preventScroll: true });
-          card.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
+      button.addEventListener('click', () => inspectEvidence(id));
       group.append(button);
     }
     return group;
@@ -187,6 +223,10 @@ if (typeof document !== 'undefined') (() => {
     aside.append(el('span', 'stat-label', 'Confidence'), el('span', 'stat-value', confidence(report.confidence)), el('p', 'confidence-note', 'Qualitative, not calibrated.'));
     finding.append(main, aside);
     panel.append(finding);
+    const visualLink = el('button', 'outline-button visual-entry', 'Explore visual evidence →');
+    visualLink.type = 'button';
+    visualLink.addEventListener('click', () => switchTab('visuals', true));
+    main.append(visualLink);
     if (report.provider_explanation && typeof report.provider_explanation.summary === 'string') {
       const explanation = el('details', 'provider-explanation model-notes');
       const summary = el('summary', 'model-notes-heading', 'Model notes');
@@ -250,7 +290,17 @@ if (typeof document !== 'undefined') (() => {
     panel.append(runDetails);
     renderEvidence();
     renderTrail();
-    switchTab('report');
+    const services = window.IncidentVisualData.buildVisualData(report).services;
+    if (state.visualService && !services.includes(state.visualService)) {
+      state.visualService = '';
+      saveVisualLocation();
+    }
+    window.IncidentVisuals.render($('visual-evidence'), report, {
+      inspectEvidence, inspectQuery, selectedService: state.visualService, selectedRange: state.visualRange,
+      onSelectionChange(service) { state.visualService = service; saveVisualLocation(); },
+      onRangeChange(range) { state.visualRange = range; saveVisualLocation(); }
+    });
+    switchTab(state.activeTab, false, false);
   }
 
   function renderEvidence() {
@@ -319,6 +369,7 @@ if (typeof document !== 'undefined') (() => {
     queries.replaceChildren();
     for (const item of list(state.report.queries)) {
       const card = el('article', 'query-card query-row');
+      card.id = `query-${item.id}`;
       const top = el('div', 'query-top');
       const title = el('h4', 'query-title');
       title.append(el('span', 'query-id', item.id || 'Query'), document.createTextNode(item.purpose || 'Telemetry query'));
@@ -472,10 +523,15 @@ if (typeof document !== 'undefined') (() => {
     const requested=location.hash.slice(1)||'/incidents';
     if(state.dirty && requested!==state.route && !window.confirm('Discard unsaved review changes?')){history.replaceState(null,'','#'+state.route);return;}
     state.dirty=false;state.route=requested;state.current=null;state.report=null;const token=++state.routeToken;
+    const [routePath, queryString = ''] = requested.split('?', 2);
+    const params = new URLSearchParams(queryString);
+    state.activeTab = ['visuals', 'evidence', 'trail'].includes(params.get('view')) ? params.get('view') : 'report';
+    state.visualService = (params.get('service') || '').slice(0, 200);
+    state.visualRange = ['baseline', 'later'].includes(params.get('range')) ? params.get('range') : 'full';
     $('error-banner').hidden=true;
     for(const view of document.querySelectorAll('.workspace-view'))view.hidden=true;
     $('page-loading').hidden=false;
-    const parts=requested.split('/').filter(Boolean);const section=parts[0]||'incidents';
+    const parts=routePath.split('/').filter(Boolean);const section=parts[0]||'incidents';
     for(const name of ['incidents','investigations','settings']){const active=name===section;$('nav-'+name).classList.toggle('active',active);if(active)$('nav-'+name).setAttribute('aria-current','page');else $('nav-'+name).removeAttribute('aria-current');}
     $('execution-badge').textContent=state.catalog.context.label||'';
     clear($('breadcrumbs')).append(el('span','',section==='settings'?'Settings':section==='investigations'?'Investigations':'Incidents'));

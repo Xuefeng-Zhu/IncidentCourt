@@ -186,7 +186,9 @@ class Handler(BaseHTTPRequestHandler):
             match = re.fullmatch(r'/api/investigations/([a-f0-9]{20})', path)
             if match:
                 return self.reply(workspace_service()[0].investigation(match[1]))
-            files={'/':('index.html','text/html'),'/static/styles.css':('styles.css','text/css'),'/static/app.js':('app.js','text/javascript')}
+            files={'/':('index.html','text/html'),'/static/styles.css':('styles.css','text/css'),'/static/app.js':('app.js','text/javascript'),
+                   '/static/visual-data.js':('visual-data.js','text/javascript'),'/static/visuals.js':('visuals.js','text/javascript'),
+                   '/static/visuals.css':('visuals.css','text/css')}
             if path not in files: return self.reply({'error':'Not found.'},404)
             name,mime=files[path]
             body=(ROOT/'incidentcourt/static'/name).read_bytes()

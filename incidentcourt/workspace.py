@@ -83,6 +83,13 @@ def validate_report(report):
         require(q.get('backend') == data_mode and text(q.get('purpose'), 2000) and text(q.get('sql'), 20000))
         require(q['sql'].lstrip().upper().startswith('SELECT ') and type(q.get('row_count')) is int and 0 <= q['row_count'] <= 1000)
         qids.add(q['id'])
+    if 'analysis_window' in report:
+        window = report['analysis_window']
+        require(isinstance(window, dict))
+        bounds = [window.get(key) for key in ('start_ts', 'baseline_end_ts', 'comparison_start_ts', 'end_ts')]
+        require(all(type(value) in (int, float) and math.isfinite(value) for value in bounds))
+        require(bounds[0] < bounds[1] <= bounds[2] < bounds[3])
+        require(isinstance(window.get('query_id'), str) and window['query_id'] in qids)
     eids = set()
     for e in report['evidence']:
         require(isinstance(e, dict) and text(e.get('id'), 120) and e['id'] not in eids and e.get('query_id') in qids)
